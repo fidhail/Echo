@@ -17,7 +17,7 @@
     --text:#DDE4EF;
     --muted:#79879C;
     --dim:#77879E;
-    /* Dopplerov pár: modrý posun = priblíženie, červený = vzďaľovanie */
+    /* Doppler pair: blue shift = approaching, red = receding */
     --blue:#5C9DFF;
     --red:#FF6A46;
     --wall:#33445C;
@@ -42,13 +42,13 @@
   .stamp{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.14em;
     text-transform:uppercase;color:var(--dim);white-space:nowrap}
 
-  /* tri stlpce: mapa - looper a nahravky - parametre v dvoch stlpcoch */
+  /* three columns: map - looper and recordings - parameters in two columns */
   .grid{display:grid;
     grid-template-columns:minmax(300px,1.02fr) minmax(232px,0.56fr) minmax(430px,1.3fr);
     gap:11px;flex:1 1 auto;min-height:0}
   .mid,.rack{min-height:0;overflow:auto;overscroll-behavior:contain}
   .mid{display:flex;flex-direction:column;gap:10px}
-  /* dva stlpce skupin, rovnako ako v plugine */
+  /* two columns of groups, the same as in the plugin */
   .rack{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:start}
   .rcol{display:flex;flex-direction:column;gap:8px;min-width:0}
   .rack .mod{min-width:0}
@@ -94,10 +94,10 @@
   button.primary{background:var(--blue);border-color:var(--blue);color:#04121F;font-weight:500}
   button.primary:hover{background:#7BB2FF;border-color:#7BB2FF;color:#04121F}
   button.on{border-color:var(--blue);color:var(--blue)}
-  button.recording{border-color:var(--red);color:var(--red)}   /* stav gombika Nahrat vystup */
+  button.recording{border-color:var(--red);color:var(--red)}   /* state of the Record output button */
   :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 
-  /* looper - stlpec na stopu: nahravanie, prehravanie, hlasitost */
+  /* looper - one column per track: record, play, volume */
   .pads{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
   .padhead{font-family:"IBM Plex Mono",monospace;font-size:10px;line-height:1.45;
     color:var(--dim);margin:-4px 0 9px}
@@ -118,7 +118,7 @@
   .knob{display:flex;justify-content:center;cursor:ns-resize;touch-action:none}
   .knob svg{display:block}
 
-  /* zoznam nacitanych nahravok */
+  /* list of loaded recordings */
   .files{display:flex;flex-direction:column;margin-top:7px}
   .frow{display:flex;align-items:center;gap:8px;padding:6px 7px;border-radius:2px;
     border:1px solid transparent;cursor:pointer;font-size:12.5px;transition:border-color .15s}
@@ -146,8 +146,8 @@
   .ctl:first-of-type{margin-top:0}
   .ctl .top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:3px}
   .ctl .nm{font-size:12.5px;color:var(--text)}
-  .ctl.off{opacity:.38}     /* parameter, ktorý zvolený režim nepoužíva */
-  .ctl.hide{display:none}   /* ladenie banky má zmysel len v jednom režime */
+  .ctl.off{opacity:.38}     /* a parameter the selected mode does not use */
+  .ctl.hide{display:none}   /* bank tuning only makes sense in one mode */
   .num-wrap{display:flex;align-items:baseline;gap:4px;flex:0 0 auto}
   input[type=number]{width:60px;text-align:right;font-family:"IBM Plex Mono",monospace;font-size:12px;
     color:var(--blue);background:var(--panel-2);border:1px solid var(--line);border-radius:2px;
@@ -186,8 +186,8 @@
   .about summary{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.17em;
     text-transform:uppercase;color:var(--dim);cursor:pointer}
   .about p{margin:9px 0 0;line-height:1.55}
-  /* nízke okno: tesnejšie riadky, nech sa parametre zmestia bez rolovania.
-     Musí byť až za základnými pravidlami, inak ich neprebije. */
+  /* low window: tighter rows so the parameters fit without scrolling.
+     Must come after the base rules, otherwise it will not override them. */
   @media (max-height:900px){
     .ctl{margin-top:4px}
     .ctl .top{margin-bottom:2px}
@@ -199,7 +199,7 @@
     .lane{padding:5px 5px 6px}
     .lane button{padding:5px 2px}
   }
-  /* prekryvná stránka s vysvetlivkami */
+  /* overlay page with the explanations */
   .ibtn{width:26px;padding:8px 0;font-family:"IBM Plex Sans",sans-serif;font-size:13px;
     text-transform:none;letter-spacing:0;font-style:italic}
   .sheet{position:fixed;inset:0;z-index:50;background:rgba(4,6,11,.9);
@@ -239,7 +239,7 @@
 
   <div class="grid">
 
-    <section class="stage" aria-label="Mapa komory">
+    <section class="stage" id="stage">
       <div class="canvas-box">
         <canvas id="cv"></canvas>
       </div>
@@ -291,110 +291,6 @@
   "use strict";
   const LANG = "en";
   const L = {
-    "sk": {
-      "title": "Kruhová echo-komora",
-      "h1a": "Kruhová ",
-      "h1b": "echo-komora",
-      "stamp": "ray-traced reverb · v3 · c = 343 m·s<sup>-1</sup>",
-      "cvAria": "Pohľad zhora na komory, lúče a odrazy. Zdroj, poslucháča aj vedľajšie kruhy presunieš ťahaním.",
-      "play": "Prehrať",
-      "stopPlay": "Zastaviť",
-      "mic": "Mikrofón",
-      "imp": "Impulz",
-      "recOut": "● Nahrať výstup",
-      "recOutStop": "■ Zastaviť nahrávanie",
-      "render": "Render súboru",
-      "meter": "Výstupná úroveň",
-      "info": "i",
-      "infoTitle": "Ako to funguje",
-      "close": "Zavrieť",
-      "legApp": "približuje sa",
-      "legRec": "vzďaľuje sa",
-      "legWall": "stena",
-      "legTip": "zdroj, poslucháča aj kruhy chyť myšou a ťahaj",
-      "looper": "Looper",
-      "padhead": "hore nahrávanie (do plnej stopy prekrýva), dole slučka, gombík hlasitosť · klávesy 1–8, so Shiftom nahrávanie · × maže",
-      "filesT": "Nahrávky",
-      "drop": "Pretiahni sem WAV / MP3 / M4A / FLAC — pridá sa do zoznamu",
-      "pick": "Vybrať súbory",
-      "statusInit": "Načítaj zvukový súbor, zapni mikrofón alebo klikni na Impulz.",
-      "rec": "● REC",
-      "dub": "● DUB",
-      "stopRec": "■ STOP",
-      "loop": "▶ LOOP",
-      "stopLoop": "■ STOP",
-      "clrTip": "Zmazať stopu",
-      "recTip": "Nahrávanie — do plnej stopy prekrýva",
-      "plyTip": "Prehrávanie v slučke",
-      "laneRec": "Nahrávanie stopy ",
-      "lanePly": "Prehrávanie stopy ",
-      "rmTip": "Odobrať zo zoznamu",
-      "src": "ZDROJ",
-      "lis": "POSLUCHÁČ",
-      "stRays": "lúče",
-      "stHits": "zásahy",
-      "stMin": "min",
-      "stAvg": "avg",
-      "stMax": "max",
-      "modes": [
-        "vypnuté",
-        "spektrálne sito",
-        "rezonančná banka",
-        "sínusová resyntéza",
-        "postupné stmavovanie"
-      ],
-      "scales": [
-        "kvinty a oktávy",
-        "dur",
-        "mol",
-        "pentatonika"
-      ],
-      "g": {
-        "in": "Vstup",
-        "rays": "Vyslané lúče",
-        "abs": "Vstrebávanie stien",
-        "tail": "Chvost",
-        "dec": "Rozpad na fundamenty",
-        "lis": "Poslucháč",
-        "src": "Zdroj",
-        "dop": "Dopplerov efekt",
-        "dim": "Rozmery",
-        "cham": "Vedľajšie komory"
-      },
-      "i": {
-        "mix": "Suchý / mokrý signál",
-        "out": "Výstupná hlasitosť",
-        "n": "Počet vyslaných lúčov",
-        "width": "Rozprestretie odrazov",
-        "absorb": "Pohltivosť pri odraze",
-        "damp": "Tlmenie výšok stenou",
-        "trace": "Ako dlho sa lúč sleduje",
-        "hold": "Držanie po zásahu",
-        "xfade": "Prelínanie pri zmene",
-        "dmode": "Režim rozpadu",
-        "decB": "Rozpad na jeden odraz",
-        "decT": "Rozpad za sekundu",
-        "droot": "Základný tón",
-        "dscale": "Ladenie",
-        "dist": "Odstup od stredu",
-        "ang": "Uhol",
-        "vel": "Rýchlosť obehu zdroja",
-        "R": "Polomer komory",
-        "lisR": "Veľkosť poslucháča",
-        "cham": "Počet pripojených komôr",
-        "csiz": " — veľkosť",
-        "cang": " — uhol",
-        "covl": " — prekryv"
-      },
-      "deg": "°",
-      "pct": "%",
-      "ms": "ms",
-      "sec": "s",
-      "hz": "Hz",
-      "db": "dB",
-      "m": "m",
-      "mps": "m/s"
-    },
     "en": {
       "title": "Circular Echo Chamber",
       "h1a": "Circular ",
@@ -498,64 +394,113 @@
       "db": "dB",
       "m": "m",
       "mps": "m/s"
+    },
+    "sk": {
+      "title": "Kruhová echo-komora",
+      "h1a": "Kruhová ",
+      "h1b": "echo-komora",
+      "stamp": "ray-traced reverb · v3 · c = 343 m·s<sup>-1</sup>",
+      "cvAria": "Pohľad zhora na komory, lúče a odrazy. Zdroj, poslucháča aj vedľajšie kruhy presunieš ťahaním.",
+      "play": "Prehrať",
+      "stopPlay": "Zastaviť",
+      "mic": "Mikrofón",
+      "imp": "Impulz",
+      "recOut": "● Nahrať výstup",
+      "recOutStop": "■ Zastaviť nahrávanie",
+      "render": "Render súboru",
+      "meter": "Výstupná úroveň",
+      "info": "i",
+      "infoTitle": "Ako to funguje",
+      "close": "Zavrieť",
+      "legApp": "približuje sa",
+      "legRec": "vzďaľuje sa",
+      "legWall": "stena",
+      "legTip": "zdroj, poslucháča aj kruhy chyť myšou a ťahaj",
+      "looper": "Looper",
+      "padhead": "hore nahrávanie (do plnej stopy prekrýva), dole slučka, gombík hlasitosť · klávesy 1–8, so Shiftom nahrávanie · × maže",
+      "filesT": "Nahrávky",
+      "drop": "Pretiahni sem WAV / MP3 / M4A / FLAC — pridá sa do zoznamu",
+      "pick": "Vybrať súbory",
+      "statusInit": "Načítaj zvukový súbor, zapni mikrofón alebo klikni na Impulz.",
+      "rec": "● REC",
+      "dub": "● DUB",
+      "stopRec": "■ STOP",
+      "loop": "▶ LOOP",
+      "stopLoop": "■ STOP",
+      "clrTip": "Zmazať stopu",
+      "recTip": "Nahrávanie — do plnej stopy prekrýva",
+      "plyTip": "Prehrávanie v slučke",
+      "laneRec": "Nahrávanie stopy ",
+      "lanePly": "Prehrávanie stopy ",
+      "rmTip": "Odobrať zo zoznamu",
+      "src": "ZDROJ",
+      "lis": "POSLUCHÁČ",
+      "stRays": "lúče",
+      "stHits": "zásahy",
+      "stMin": "min",
+      "stAvg": "avg",
+      "stMax": "max",
+      "modes": [
+        "vypnuté",
+        "spektrálne sito",
+        "rezonančná banka",
+        "sínusová resyntéza",
+        "postupné stmavovanie"
+      ],
+      "scales": [
+        "kvinty a oktávy",
+        "dur",
+        "mol",
+        "pentatonika"
+      ],
+      "g": {
+        "in": "Vstup",
+        "rays": "Vyslané lúče",
+        "abs": "Vstrebávanie stien",
+        "tail": "Chvost",
+        "dec": "Rozpad na fundamenty",
+        "lis": "Poslucháč",
+        "src": "Zdroj",
+        "dop": "Dopplerov efekt",
+        "dim": "Rozmery",
+        "cham": "Vedľajšie komory"
+      },
+      "i": {
+        "mix": "Suchý / mokrý signál",
+        "out": "Výstupná hlasitosť",
+        "n": "Počet vyslaných lúčov",
+        "width": "Rozprestretie odrazov",
+        "absorb": "Pohltivosť pri odraze",
+        "damp": "Tlmenie výšok stenou",
+        "trace": "Ako dlho sa lúč sleduje",
+        "hold": "Držanie po zásahu",
+        "xfade": "Prelínanie pri zmene",
+        "dmode": "Režim rozpadu",
+        "decB": "Rozpad na jeden odraz",
+        "decT": "Rozpad za sekundu",
+        "droot": "Základný tón",
+        "dscale": "Ladenie",
+        "dist": "Odstup od stredu",
+        "ang": "Uhol",
+        "vel": "Rýchlosť obehu zdroja",
+        "R": "Polomer komory",
+        "lisR": "Veľkosť poslucháča",
+        "cham": "Počet pripojených komôr",
+        "csiz": " — veľkosť",
+        "cang": " — uhol",
+        "covl": " — prekryv"
+      },
+      "deg": "°",
+      "pct": "%",
+      "ms": "ms",
+      "sec": "s",
+      "hz": "Hz",
+      "db": "dB",
+      "m": "m",
+      "mps": "m/s"
     }
   };
   const DOC = {
-sk: [
-['Princíp', [
-  'Zo zdroja vyletí N lúčov do rovnomerne rozložených smerov. Každý sa odráža od zakrivenej steny a pri každom úseku sa testuje, či pretne kruh poslucháča.',
-  'Počuť je len tie úseky, ktoré ho naozaj trafia. Každý taký prienik je jedna odbočka — oneskorenie s vlastnou hlasitosťou, filtrom a panorámou.',
-  'Lúč sa na poslucháčovi nezastaví, letí ďalej a môže ho trafiť znova. Nikde nie je spätná väzba, takže sústava nemôže narásť ani skresľovať.']],
-['Geometria kruhu', [
-  'Po prvom odraze má v kruhu každá ďalšia tetiva rovnakú dĺžku — závisí len od uhla dopadu α, nie od toho, kde lúč začal.',
-  '= dĺžka tetivy = 2R · cos α',
-  'Preto sú ozveny v kruhu rovnomerne rozostupené a veľkosť kruhu priamo určuje ich odstup.']],
-['Zásah poslucháča', [
-  'Poslucháč je kotúč s polomerom rL. Pre úsek lúča z bodu O v smere d hľadáme priesečník s kotúčom:',
-  '= proj = (L − O) · d,   m² = |O + proj·d − L|²',
-  '= zásah, ak m² < rL² ;   vzdialenosť = proj − √(rL² − m²)',
-  'Väčší poslucháč zachytí viac lúčov, teda hustejší dozvuk — nie hlasnejší.']],
-['Oneskorenie a útlm', [
-  'Dráha sa prepočíta na čas rýchlosťou zvuku c = 343 m·s⁻¹, útlm na počet odrazov b a pohltivosť steny a:',
-  '= oneskorenie = dráha · R / c',
-  '= amplitúda = (1 − a)^b']],
-['Normalizácia hlasitosti', [
-  'Energetické normovanie platí, kým sú odbočky rozhádzané v čase. V symetrickej polohe prídu takmer naraz a sčítajú sa priamo, preto je druhý strop na súčet amplitúd v okne ±2 ms:',
-  '= g = min( 0,62 / √Σ amp² ,  0,5 / max Σ amp v okne 2 ms )']],
-['Tlmenie výšok stenou', [
-  'Lúč, ktorý prešiel stenou b-krát, by mal prejsť kaskádou b jednopólových filtrov. Jeden filter s posunutým rohom dá takmer to isté:',
-  '= f_b = f · √(2^(1/b) − 1)',
-  'Rohová frekvencia sedí presne; strmosť je 12 dB/okt namiesto plnej kaskády.']],
-['Dopplerov efekt', [
-  'Nie je to pitch shifter. Zdroj naozaj obieha, dráhy sa predlžujú a skracujú a spolu s nimi aj oneskorenia — výška sa mení sama.',
-  '= Δf / f = −(dL/dt) / c',
-  'Každý lúč sa posúva inak, takže pri jednom-dvoch lúčoch počuť skutočný pokles tónu, pri mnohých sa to zmení na trblietanie.']],
-['Vedľajšie komory', [
-  'Každá komora má vlastnú veľkosť r (podiel hlavného polomeru), uhol a prekryv. Vzdialenosť stredov:',
-  '= d = (1 + r) + prekryv · ( √(1 − r²) − (1 + r) )',
-  'Pri prekryve 0 sa kruhy len dotýkajú, pri 100 % je spoločný otvor najširší. Kde je otvor, stena neexistuje: lúč preletí a odráža sa ďalej v druhej komore — v oboch smeroch, lebo je to tá istá trajektória.']],
-['Rozpad na fundamenty', [
-  'Každý zásah nesie silu rozpadu podľa toho, koľko odrazov má za sebou a ako dlho letí:',
-  '= s = min(1,  b · rozpad_na_odraz  +  t · rozpad_za_sekundu )',
-  'Zásahy sa podľa nej triedia do štyroch stupňov a každý stupeň sa spracuje inak silno — čím ďalej v chvoste, tým menej zložiek zo zvuku ostane.']],
-['Štyri režimy rozpadu', [
-  'Spektrálne sito: STFT s 1024 bodmi a sínusovým oknom pri polovičnom prekryve (w² sa sčíta presne na 1). Z každého okna ostane len K najsilnejších vrcholov, K klesá zo 48 na 1.',
-  'Rezonančná banka: dvojpólové rezonátory naladené na stupnicu. Vstupný zisk drží jednotku na rezonancii:',
-  '= y = g·x + 2r cos ω · y₋₁ − r² · y₋₂,   r = e^(−ω / 2Q),   g = (1−r)·√(1 − 2r cos 2ω + r²)',
-  'Sínusová resyntéza: z vrcholov spektra sa parabolickou interpoláciou odčíta frekvencia aj amplitúda a prehrajú sa ako čisté sínusy s prenášanou fázou.',
-  'Postupné stmavovanie: kaskáda dolných priepustí s klesajúcim rohom.',
-  '= f = max( 45 Hz ,  20 000 · (1 − s)⁴ )']],
-['Držanie po zásahu', [
-  'Zachytený zvuk môže po zásahu ešte doznievať. Robia to štyri hrebeňové filtre s nesúdeliteľnými dĺžkami; spätná väzba je nastavená tak, aby T60 sedelo na zvolený čas:',
-  '= g = 10^( −3 · dĺžka / držanie ),   strop 0,995']],
-['Prelínanie pri zmene', [
-  'Celý chvost žije v jednej oneskorovacej linke a odbočky sú len čítacie hlavy v nej. Keď sa zmení parameter, hlavy by skočili na nové miesta uprostred vlny — to je to puknutie.',
-  'Preto sa stará sada odbočiek ešte chvíľu dohráva a stlmuje, kým nová nabieha. Namerané pri 200 zmenách slidra: 354 nespojitostí bez prelínania, 0 s ním.']],
-['Okienko so stavom', [
-  'lúče — koľko vyslaných lúčov naozaj trafilo poslucháča, vrátane neskorých zásahov v chvoste, a koľko je to percent zo všetkých.',
-  'zásahy — počet odbočiek, teda samostatných ozvien v aktuálnej odozve.',
-  'min / avg / max — najkratšia, priemerná a najdlhšia dráha zásahu v metroch.']]
-],
 en: [
 ['Principle', [
   'The source emits N rays in evenly spaced directions. Each one reflects off the curved wall, and every leg is tested against the listener disc.',
@@ -605,92 +550,200 @@ en: [
   '= g = 10^( −3 · length / hold ),   capped at 0.995']],
 ['Parameter crossfade', [
   'The whole tail lives in a single delay line and the taps are only read heads into it. When a parameter changes the heads would jump to new positions mid-waveform — that is the click.',
-  'So the old tap set keeps playing and fades out while the new one fades in. Measured over 200 slider changes: 354 discontinuities without the crossfade, 0 with it.']],
+  'So the old tap set keeps playing and fades out while the new one fades in. Measured over 200 slider changes: 350 discontinuities without the crossfade, 0 with it.']],
 ['Status readout', [
   'rays — how many emitted rays actually hit the listener, late tail hits included, and what share of all rays that is.',
   'hits — the number of taps, that is separate echoes in the current response.',
   'min / avg / max — shortest, mean and longest hit path in metres.']]
+],
+sk: [
+['Princíp', [
+  'Zo zdroja vyletí N lúčov do rovnomerne rozložených smerov. Každý sa odráža od zakrivenej steny a pri každom úseku sa testuje, či pretne kruh poslucháča.',
+  'Počuť je len tie úseky, ktoré ho naozaj trafia. Každý taký prienik je jedna odbočka — oneskorenie s vlastnou hlasitosťou, filtrom a panorámou.',
+  'Lúč sa na poslucháčovi nezastaví, letí ďalej a môže ho trafiť znova. Nikde nie je spätná väzba, takže sústava nemôže narásť ani skresľovať.']],
+['Geometria kruhu', [
+  'Po prvom odraze má v kruhu každá ďalšia tetiva rovnakú dĺžku — závisí len od uhla dopadu α, nie od toho, kde lúč začal.',
+  '= dĺžka tetivy = 2R · cos α',
+  'Preto sú ozveny v kruhu rovnomerne rozostupené a veľkosť kruhu priamo určuje ich odstup.']],
+['Zásah poslucháča', [
+  'Poslucháč je kotúč s polomerom rL. Pre úsek lúča z bodu O v smere d hľadáme priesečník s kotúčom:',
+  '= proj = (L − O) · d,   m² = |O + proj·d − L|²',
+  '= zásah, ak m² < rL² ;   vzdialenosť = proj − √(rL² − m²)',
+  'Väčší poslucháč zachytí viac lúčov, teda hustejší dozvuk — nie hlasnejší.']],
+['Oneskorenie a útlm', [
+  'Dráha sa prepočíta na čas rýchlosťou zvuku c = 343 m·s⁻¹, útlm na počet odrazov b a pohltivosť steny a:',
+  '= oneskorenie = dráha · R / c',
+  '= amplitúda = (1 − a)^b']],
+['Normalizácia hlasitosti', [
+  'Energetické normovanie platí, kým sú odbočky rozhádzané v čase. V symetrickej polohe prídu takmer naraz a sčítajú sa priamo, preto je druhý strop na súčet amplitúd v okne ±2 ms:',
+  '= g = min( 0,62 / √Σ amp² ,  0,5 / max Σ amp v okne 2 ms )']],
+['Tlmenie výšok stenou', [
+  'Lúč, ktorý prešiel stenou b-krát, by mal prejsť kaskádou b jednopólových filtrov. Jeden filter s posunutým rohom dá takmer to isté:',
+  '= f_b = f · √(2^(1/b) − 1)',
+  'Rohová frekvencia sedí presne; strmosť je 12 dB/okt namiesto plnej kaskády.']],
+['Dopplerov efekt', [
+  'Nie je to pitch shifter. Zdroj naozaj obieha, dráhy sa predlžujú a skracujú a spolu s nimi aj oneskorenia — výška sa mení sama.',
+  '= Δf / f = −(dL/dt) / c',
+  'Každý lúč sa posúva inak, takže pri jednom-dvoch lúčoch počuť skutočný pokles tónu, pri mnohých sa to zmení na trblietanie.']],
+['Vedľajšie komory', [
+  'Každá komora má vlastnú veľkosť r (podiel hlavného polomeru), uhol a prekryv. Vzdialenosť stredov:',
+  '= d = (1 + r) + prekryv · ( √(1 − r²) − (1 + r) )',
+  'Pri prekryve 0 sa kruhy len dotýkajú, pri 100 % je spoločný otvor najširší. Kde je otvor, stena neexistuje: lúč preletí a odráža sa ďalej v druhej komore — v oboch smeroch, lebo je to tá istá trajektória.']],
+['Rozpad na fundamenty', [
+  'Každý zásah nesie silu rozpadu podľa toho, koľko odrazov má za sebou a ako dlho letí:',
+  '= s = min(1,  b · rozpad_na_odraz  +  t · rozpad_za_sekundu )',
+  'Zásahy sa podľa nej triedia do štyroch stupňov a každý stupeň sa spracuje inak silno — čím ďalej v chvoste, tým menej zložiek zo zvuku ostane.']],
+['Štyri režimy rozpadu', [
+  'Spektrálne sito: STFT s 1024 bodmi a sínusovým oknom pri polovičnom prekryve (w² sa sčíta presne na 1). Z každého okna ostane len K najsilnejších vrcholov, K klesá zo 48 na 1.',
+  'Rezonančná banka: dvojpólové rezonátory naladené na stupnicu. Vstupný zisk drží jednotku na rezonancii:',
+  '= y = g·x + 2r cos ω · y₋₁ − r² · y₋₂,   r = e^(−ω / 2Q),   g = (1−r)·√(1 − 2r cos 2ω + r²)',
+  'Sínusová resyntéza: z vrcholov spektra sa parabolickou interpoláciou odčíta frekvencia aj amplitúda a prehrajú sa ako čisté sínusy s prenášanou fázou.',
+  'Postupné stmavovanie: kaskáda dolných priepustí s klesajúcim rohom.',
+  '= f = max( 45 Hz ,  20 000 · (1 − s)⁴ )']],
+['Držanie po zásahu', [
+  'Zachytený zvuk môže po zásahu ešte doznievať. Robia to štyri hrebeňové filtre s nesúdeliteľnými dĺžkami; spätná väzba je nastavená tak, aby T60 sedelo na zvolený čas:',
+  '= g = 10^( −3 · dĺžka / držanie ),   strop 0,995']],
+['Prelínanie pri zmene', [
+  'Celý chvost žije v jednej oneskorovacej linke a odbočky sú len čítacie hlavy v nej. Keď sa zmení parameter, hlavy by skočili na nové miesta uprostred vlny — to je to puknutie.',
+  'Preto sa stará sada odbočiek ešte chvíľu dohráva a stlmuje, kým nová nabieha. Namerané pri 200 zmenách slidra: 350 nespojitostí bez prelínania, 0 s ním.']],
+['Okienko so stavom', [
+  'lúče — koľko vyslaných lúčov naozaj trafilo poslucháča, vrátane neskorých zásahov v chvoste, a koľko je to percent zo všetkých.',
+  'zásahy — počet odbočiek, teda samostatných ozvien v aktuálnej odozve.',
+  'min / avg / max — najkratšia, priemerná a najdlhšia dráha zásahu v metroch.']]
 ]
 };
   const T = L[LANG];
 
 
-  // texty s dopočítanými hodnotami — po jazykoch, nech ostanú čitateľné
-  const SK = LANG === 'sk';
-  const M = {
-    stopped:      () => SK ? 'Zastavené.' : 'Stopped.',
-    playing:      n  => SK ? 'Prehrávam: ' + n + ' (v slučke)' : 'Playing: ' + n + ' (looped)',
-    decoding:     n  => SK ? 'Dekódujem ' + n + ' …' : 'Decoding ' + n + ' …',
-    failed:       l  => SK ? 'Nepodarilo sa dekódovať: ' + l + '. Formát AAC/M4A niektoré prehliadače nezvládnu — skús WAV alebo MP3.'
-                           : 'Could not decode: ' + l + '. Some browsers cannot handle AAC/M4A — try WAV or MP3.',
-    loaded:       (n, d, c, r, k) => SK
-      ? 'Načítané: ' + n + ' · ' + d + ' s · ' + c + ' kan. · ' + r + ' Hz' + (k > 1 ? '  (v zozname ' + k + ')' : '')
-      : 'Loaded: ' + n + ' · ' + d + ' s · ' + c + ' ch · ' + r + ' Hz' + (k > 1 ? '  (' + k + ' in list)' : ''),
-    micOff:       () => SK ? 'Mikrofón vypnutý.' : 'Microphone off.',
-    micOn:        () => SK ? 'Mikrofón beží — použi slúchadlá, inak vznikne spätná väzba.'
-                           : 'Microphone live — use headphones or you will get feedback.',
-    micFail:      e  => SK ? 'Mikrofón nie je dostupný (' + e + '). V publikovanej stránke ho prehliadač často blokuje — otvor stiahnutý HTML súbor lokálne.'
-                           : 'Microphone unavailable (' + e + '). Browsers often block it on a published page — open the downloaded HTML file locally.',
-    track:        (i, t) => SK ? 'Stopa ' + i + ': ' + t : 'Track ' + i + ': ' + t,
-    recOut:       () => SK ? 'Nahrávam výstup …' : 'Recording output …',
-    tooShort:     () => SK ? 'Nahrávka bola príliš krátka.' : 'The recording was too short.',
-    rendering:    () => SK ? 'Renderujem …' : 'Rendering …',
-    renderFail:   e  => SK ? 'Render zlyhal: ' + e : 'Render failed: ' + e,
-    toWebm:       d  => SK ? 'Prevádzam na WebM (beží v reálnom čase, ' + d + ' s) …'
-                           : 'Converting to WebM (runs in real time, ' + d + ' s) …',
-    saved:        (n, d) => SK ? 'Uložené: ' + n + ' · ' + d + ' s' : 'Saved: ' + n + ' · ' + d + ' s',
-    saveCancel:   () => SK ? 'Uloženie si zrušil. Nahrávka ostáva v prehrávači nižšie.'
-                           : 'You cancelled the save. The recording stays in the player below.',
-    saveFail:     c  => SK ? 'Uloženie zlyhalo (' + c + '). Nahrávka ostáva v prehrávači nižšie.'
-                           : 'Saving failed (' + c + '). The recording stays in the player below.'
+  // Messages and hints carry computed values, so they are functions rather than plain
+  // strings. Same shape as L and DOC: one table per language, English first, and the
+  // whole set is picked once by LANG - no language test is left in the running code.
+  const MSG = {
+    en: {
+      stopped:    () => 'Stopped.',
+      playing:    n  => 'Playing: ' + n + ' (looped)',
+      decoding:   n  => 'Decoding ' + n + ' …',
+      failed:     l  => 'Could not decode: ' + l + '. Some browsers cannot handle AAC/M4A — try WAV or MP3.',
+      loaded:     (n, d, c, r, k) =>
+        'Loaded: ' + n + ' · ' + d + ' s · ' + c + ' ch · ' + r + ' Hz' + (k > 1 ? '  (' + k + ' in list)' : ''),
+      micOff:     () => 'Microphone off.',
+      micOn:      () => 'Microphone live — use headphones or you will get feedback.',
+      micFail:    e  => 'Microphone unavailable (' + e + '). Browsers often block it on a published page — open the downloaded HTML file locally.',
+      track:      (i, t) => 'Track ' + i + ': ' + t,
+      laneEmpty:  i  => 'Track ' + i + ' is empty — record it with the top button first.',
+      knobTitle:  p  => 'Track volume ' + p + ' % — drag up and down, double-click for 100 %',
+      recOut:     () => 'Recording output …',
+      tooShort:   () => 'The recording was too short.',
+      rendering:  () => 'Rendering …',
+      renderFail: e  => 'Render failed: ' + e,
+      toWebm:     d  => 'Converting to WebM (runs in real time, ' + d + ' s) …',
+      saved:      (n, d) => 'Saved: ' + n + ' · ' + d + ' s',
+      saveCancel: () => 'You cancelled the save. The recording stays in the player below.',
+      saveFail:   c  => 'Saving failed (' + c + '). The recording stays in the player below.',
+      noRecorder: () => 'MediaRecorder is not available',
+      noWebm:     () => 'WebM is not supported',
+      recError:   () => 'recording error',
+      outFile:    () => 'chamber_recording',
+      renderFile: (base, r) => base + '_chamber_' + r + 'm',
+      untitled:   () => 'audio'
+    },
+    sk: {
+      stopped:    () => 'Zastavené.',
+      playing:    n  => 'Prehrávam: ' + n + ' (v slučke)',
+      decoding:   n  => 'Dekódujem ' + n + ' …',
+      failed:     l  => 'Nepodarilo sa dekódovať: ' + l + '. Formát AAC/M4A niektoré prehliadače nezvládnu — skús WAV alebo MP3.',
+      loaded:     (n, d, c, r, k) =>
+        'Načítané: ' + n + ' · ' + d + ' s · ' + c + ' kan. · ' + r + ' Hz' + (k > 1 ? '  (v zozname ' + k + ')' : ''),
+      micOff:     () => 'Mikrofón vypnutý.',
+      micOn:      () => 'Mikrofón beží — použi slúchadlá, inak vznikne spätná väzba.',
+      micFail:    e  => 'Mikrofón nie je dostupný (' + e + '). V publikovanej stránke ho prehliadač často blokuje — otvor stiahnutý HTML súbor lokálne.',
+      track:      (i, t) => 'Stopa ' + i + ': ' + t,
+      laneEmpty:  i  => 'Stopa ' + i + ' je prázdna — najprv ju nahraj horným tlačidlom.',
+      knobTitle:  p  => 'Hlasitosť stopy ' + p + ' % — ťahaj hore/dole, dvojklik vráti 100 %',
+      recOut:     () => 'Nahrávam výstup …',
+      tooShort:   () => 'Nahrávka bola príliš krátka.',
+      rendering:  () => 'Renderujem …',
+      renderFail: e  => 'Render zlyhal: ' + e,
+      toWebm:     d  => 'Prevádzam na WebM (beží v reálnom čase, ' + d + ' s) …',
+      saved:      (n, d) => 'Uložené: ' + n + ' · ' + d + ' s',
+      saveCancel: () => 'Uloženie si zrušil. Nahrávka ostáva v prehrávači nižšie.',
+      saveFail:   c  => 'Uloženie zlyhalo (' + c + '). Nahrávka ostáva v prehrávači nižšie.',
+      noRecorder: () => 'MediaRecorder nie je dostupný',
+      noWebm:     () => 'WebM nie je podporovaný',
+      recError:   () => 'chyba nahrávania',
+      outFile:    () => 'komora_zaznam',
+      renderFile: (base, r) => base + '_komora_' + r + 'm',
+      untitled:   () => 'zvuk'
+    }
   };
+  const M = MSG[LANG];
 
-  // nápovedy pod ovládačmi
-  const H = {
-    radius: () => SK
-      ? 'k stene a späť ' + (2000*P.R/C).toFixed(0) + ' ms · chvost ' + tailSec().toFixed(2) + ' s'
-      : 'to the wall and back ' + (2000*P.R/C).toFixed(0) + ' ms · tail ' + tailSec().toFixed(2) + ' s',
-    lisR: nt => nt === 0
-      ? (SK ? 'nikto ho netrafil — zväčši ho alebo pridaj lúče' : 'nothing hit it — enlarge it or add rays')
-      : (SK ? 'polomer ' + (P.lisR*P.R).toFixed(1) + ' m · väčší = hustejší dozvuk'
-            : 'radius ' + (P.lisR*P.R).toFixed(1) + ' m · larger = denser tail'),
-    absorb: () => P.absorb <= 0.0015
-      ? (SK ? 'stena neberie nič — chvost obmedzuje už len dĺžka sledovania'
-            : 'the wall takes nothing — only the trace time limits the tail')
-      : (P.absorb >= 0.995
-        ? (SK ? 'stena berie všetko — len prvé odrazy' : 'the wall takes everything — first reflections only')
-        : (SK ? 'odrazivosť ' + ((1-P.absorb)*100).toFixed(0) + ' % · chvost ' + tailSec().toFixed(2) + ' s'
-              : 'reflectivity ' + ((1-P.absorb)*100).toFixed(0) + ' % · tail ' + tailSec().toFixed(2) + ' s')),
-    trace: () => SK
-      ? 'strop ' + P.trace.toFixed(2) + ' s alebo −56 dB · reálne ' + tailSec().toFixed(2) + ' s'
-      : 'cap ' + P.trace.toFixed(2) + ' s or −56 dB · actual ' + tailSec().toFixed(2) + ' s',
-    hold: () => P.hold < 0.02
-      ? (SK ? 'zásah zaznie a skončí' : 'a hit sounds once and ends')
-      : (SK ? 'zachytený zvuk doznieva ešte ' + P.hold.toFixed(2) + ' s'
-            : 'a captured hit keeps ringing for ' + P.hold.toFixed(2) + ' s'),
-    vel: () => P.vel > 0
-      ? (SK ? 'pri 1–2 lúčoch počuť pokles tónu, pri mnohých trblietanie'
-            : 'with 1–2 rays you hear a real pitch drop, with many it becomes shimmer')
-      : (SK ? 'zdroj stojí, žiadny posun tónu' : 'the source is still, no pitch shift'),
-    cham: () => P.cham === 0
-      ? (SK ? 'iba hlavný kruh — nastav aspoň 1 a objavia sa jej parametre'
-            : 'main circle only — set at least 1 and its parameters appear')
-      : (SK ? P.cham + '× kruh vedľa hlavného, každý s vlastnou veľkosťou, uhlom a prekryvom'
-            : P.cham + ' circle(s) beside the main one, each with its own size, angle and overlap'),
-    width: () => P.width <= 1.005
-      ? (SK ? 'odrazy sedia tam, kam ich posiela geometria' : 'reflections sit where the geometry puts them')
-      : (SK ? 'nad 100 % sa tlačia k okrajom — nie širšie, len dutejšie'
-            : 'above 100 % they crowd the edges — not wider, just hollower'),
-    dmode: () => (SK
-      ? ['vypnuté — chvost znie tak, ako doletel','ostávajú len najsilnejšie vrcholy',
-         'ustáli sa na tónoch stupnice','zložky sa prehrajú ako sínusy','chvost sa filtruje čoraz nižšie']
-      : ['off — the tail sounds as it arrived','only the strongest peaks survive',
-         'settles onto the notes of the scale','components play back as sines',
-         'the tail is filtered ever lower'])[P.dmode|0],
-    decRate: (perB, perT) => (!perB && !perT)
-      ? (SK ? 'obe rýchlosti sú na nule — nič sa nerozkladá' : 'both rates are zero — nothing decays')
-      : (SK ? 'úplný po ' : 'complete after ') + [perB, perT].filter(Boolean).join(' / ')
+  // hints under the controls
+  const HINT = {
+    en: {
+      radius: () => 'to the wall and back ' + (2000*P.R/C).toFixed(0) + ' ms · tail ' + tailSec().toFixed(2) + ' s',
+      lisR: nt => nt === 0
+        ? 'nothing hit it — enlarge it or add rays'
+        : 'radius ' + (P.lisR*P.R).toFixed(1) + ' m · larger = denser tail',
+      absorb: () => P.absorb <= 0.0015
+        ? 'the wall takes nothing — only the trace time limits the tail'
+        : (P.absorb >= 0.995
+          ? 'the wall takes everything — first reflections only'
+          : 'reflectivity ' + ((1-P.absorb)*100).toFixed(0) + ' % · tail ' + tailSec().toFixed(2) + ' s'),
+      trace: () => 'cap ' + P.trace.toFixed(2) + ' s or −56 dB · actual ' + tailSec().toFixed(2) + ' s',
+      hold: () => P.hold < 0.02
+        ? 'a hit sounds once and ends'
+        : 'a captured hit keeps ringing for ' + P.hold.toFixed(2) + ' s',
+      vel: () => P.vel > 0
+        ? 'with 1–2 rays you hear a real pitch drop, with many it becomes shimmer'
+        : 'the source is still, no pitch shift',
+      cham: () => P.cham === 0
+        ? 'main circle only — set at least 1 and its parameters appear'
+        : P.cham + ' circle(s) beside the main one, each with its own size, angle and overlap',
+      width: () => P.width <= 1.005
+        ? 'reflections sit where the geometry puts them'
+        : 'above 100 % they crowd the edges — not wider, just hollower',
+      dmode: () => ['off — the tail sounds as it arrived','only the strongest peaks survive',
+        'settles onto the notes of the scale','components play back as sines',
+        'the tail is filtered ever lower'][P.dmode|0],
+      bounces: n => n + ' bounces',
+      decRate: (perB, perT) => (!perB && !perT)
+        ? 'both rates are zero — nothing decays'
+        : 'complete after ' + [perB, perT].filter(Boolean).join(' / ')
+    },
+    sk: {
+      radius: () => 'k stene a späť ' + (2000*P.R/C).toFixed(0) + ' ms · chvost ' + tailSec().toFixed(2) + ' s',
+      lisR: nt => nt === 0
+        ? 'nikto ho netrafil — zväčši ho alebo pridaj lúče'
+        : 'polomer ' + (P.lisR*P.R).toFixed(1) + ' m · väčší = hustejší dozvuk',
+      absorb: () => P.absorb <= 0.0015
+        ? 'stena neberie nič — chvost obmedzuje už len dĺžka sledovania'
+        : (P.absorb >= 0.995
+          ? 'stena berie všetko — len prvé odrazy'
+          : 'odrazivosť ' + ((1-P.absorb)*100).toFixed(0) + ' % · chvost ' + tailSec().toFixed(2) + ' s'),
+      trace: () => 'strop ' + P.trace.toFixed(2) + ' s alebo −56 dB · reálne ' + tailSec().toFixed(2) + ' s',
+      hold: () => P.hold < 0.02
+        ? 'zásah zaznie a skončí'
+        : 'zachytený zvuk doznieva ešte ' + P.hold.toFixed(2) + ' s',
+      vel: () => P.vel > 0
+        ? 'pri 1–2 lúčoch počuť pokles tónu, pri mnohých trblietanie'
+        : 'zdroj stojí, žiadny posun tónu',
+      cham: () => P.cham === 0
+        ? 'iba hlavný kruh — nastav aspoň 1 a objavia sa jej parametre'
+        : P.cham + '× kruh vedľa hlavného, každý s vlastnou veľkosťou, uhlom a prekryvom',
+      width: () => P.width <= 1.005
+        ? 'odrazy sedia tam, kam ich posiela geometria'
+        : 'nad 100 % sa tlačia k okrajom — nie širšie, len dutejšie',
+      dmode: () => ['vypnuté — chvost znie tak, ako doletel','ostávajú len najsilnejšie vrcholy',
+        'ustáli sa na tónoch stupnice','zložky sa prehrajú ako sínusy',
+        'chvost sa filtruje čoraz nižšie'][P.dmode|0],
+      bounces: n => n + ' odrazoch',
+      decRate: (perB, perT) => (!perB && !perT)
+        ? 'obe rýchlosti sú na nule — nič sa nerozkladá'
+        : 'úplný po ' + [perB, perT].filter(Boolean).join(' / ')
+    }
   };
+  const H = HINT[LANG];
 
   const C = 343;
   const $ = id => document.getElementById(id);
@@ -705,14 +758,18 @@ en: [
               c2siz:0.42, c2ang:150, c2ovl:0.50,
               c3siz:0.42, c3ang:240, c3ovl:0.50,
               c4siz:0.42, c4ang:330, c4ovl:0.50 };
-  const MAXTAPS = 160;                     // strop poctu zasahov poslucaca
-  let SRC = {x:0.45, y:0};      // v jednotkách hlavného polomeru
+  // Ceiling on the number of taps. Lower than the plugin's 256 because every tap here is
+  // three Web Audio nodes (delay, gain, panner) and the browser has to keep them all live.
+  const MAXTAPS = 160;
+  // Work budget for one trace, in ray segments - see the plugin, same reasoning.
+  const MAXSEG = 4000;
+  let SRC = {x:0.45, y:0};      // in units of the main radius
   let LIS = {x:-0.30, y:0.14};
-  let srcAng = P.srcA*Math.PI/180;         // Doppler si točí vlastný uhol
-  let srcRoom = 0;
+  let srcAng = P.srcA*Math.PI/180;         // Doppler spins its own angle
+  let srcCham = 0;
 
-  /* ================= geometria a trasovanie ================= */
-  function rooms(){
+  /* ================= geometry and tracing ================= */
+  function chambers(){
     const list = [{cx:0, cy:0, r:1, k:0}];
     for(let k=1;k<=P.cham;k++){
       const r = P['c'+k+'siz'], ang = P['c'+k+'ang']*Math.PI/180, ov = P['c'+k+'ovl'];
@@ -722,24 +779,24 @@ en: [
     return list;
   }
 
-  // V ktorej komore bod leží? Hlavný kruh má prednosť, -1 = nikde.
-  function roomOf(p, rs){
+  // Which chamber holds the point? The main circle wins, -1 = none.
+  function chamberOf(p, chs){
     if(Math.hypot(p.x, p.y) < 1 - 1e-6) return 0;
-    for(let k=1;k<rs.length;k++)
-      if(Math.hypot(p.x-rs[k].cx, p.y-rs[k].cy) < rs[k].r - 1e-6) return k;
+    for(let k=1;k<chs.length;k++)
+      if(Math.hypot(p.x-chs[k].cx, p.y-chs[k].cy) < chs[k].r - 1e-6) return k;
     return -1;
   }
 
-  // Ako ďaleko od stredu sa dá ísť smerom th a stále byť vnútri niektorej komory.
-  // Začneme na okraji hlavného kruhu a predlžujeme cez každú komoru, ktorá ten
-  // úsek pretína — tak sa zdroj ani poslucháč nikdy nedostanú von.
-  function maxRad(th, rs){
+  // How far from the centre one can go along th and still be inside some chamber.
+  // We start at the rim of the main circle and extend through every chamber that
+  // crosses that span - so the source and the listener can never get out.
+  function maxRad(th, chs){
     const dx = Math.cos(th), dy = Math.sin(th);
     let hi = 1, moved = true, guard = 0;
-    while(moved && guard++ < rs.length){
+    while(moved && guard++ < chs.length){
       moved = false;
-      for(let k=1;k<rs.length;k++){
-        const c = rs[k];
+      for(let k=1;k<chs.length;k++){
+        const c = chs[k];
         const p = c.cx*dx + c.cy*dy;
         const q = c.cx*c.cx + c.cy*c.cy - c.r*c.r;
         const disc = p*p - q;
@@ -751,18 +808,18 @@ en: [
     return hi;
   }
 
-  // Polohy sú polárne; polomer sa oreže na dosiahnuteľnú hranicu.
+  // The positions are polar; the radius is clamped to the reachable boundary.
   let lastSrcA = P.srcA;
   function place(){
-    const rs = rooms();
-    // keď sa uhol zmení zvonku (slider, automatizácia), Doppler naň naskočí
+    const chs = chambers();
+    // when the angle changes from outside (slider, automation) Doppler picks it up
     if(P.srcA !== lastSrcA){ srcAng = P.srcA*Math.PI/180; lastSrcA = P.srcA; }
-    let a = srcAng, m = maxRad(a, rs)*0.985, r = Math.min(P.srcR, m);
+    let a = srcAng, m = maxRad(a, chs)*0.985, r = Math.min(P.srcR, m);
     SRC = {x:Math.cos(a)*r, y:Math.sin(a)*r};
-    a = P.lisPA*Math.PI/180; m = maxRad(a, rs)*0.985; r = Math.min(P.lisPR, m);
+    a = P.lisPA*Math.PI/180; m = maxRad(a, chs)*0.985; r = Math.min(P.lisPR, m);
     LIS = {x:Math.cos(a)*r, y:Math.sin(a)*r};
-    srcRoom = Math.max(0, roomOf(SRC, rs));
-    return rs;
+    srcCham = Math.max(0, chamberOf(SRC, chs));
+    return chs;
   }
   function hitCircle(O, d, c){
     const ox = O.x-c.cx, oy = O.y-c.cy;
@@ -774,7 +831,7 @@ en: [
   const nyq = (c, f) => clamp(f, 20, c.sampleRate*0.45);
   function reflect(d, n){ const dn = d.x*n.x + d.y*n.y; return {x:d.x - 2*dn*n.x, y:d.y - 2*dn*n.y}; }
 
-  // Pretne úsek lúča kruh poslucháča? Vracia aj to, kde sa dotkne jeho okraja.
+  // Does the ray segment cross the listener circle? It also returns where it meets the rim.
   function crossListener(O, d, segLen){
     const wx = LIS.x - O.x, wy = LIS.y - O.y;
     const proj = clamp(wx*d.x + wy*d.y, 0, segLen);
@@ -784,22 +841,28 @@ en: [
     return {at: Math.max(0, proj - Math.sqrt(Math.max(0, r2 - m2)))};
   }
 
-  // Skutočné trasovanie: lúč sa odráža a pri každom úseku sa pýtame,
-  // či trafil poslucháča. Kto netrafí, nie je počuť.
+  // Real tracing: the ray bounces and at every segment we ask
+  // whether it hit the listener. Whatever misses is not heard.
   function traceTaps(){
-    const rs = place(), taps = [];
-    const maxpath = Math.min(P.trace, 8) * C / P.R;   // v jednotkách polomeru
+    const chs = place(), taps = [];
+    const maxpath = Math.min(P.trace, 8) * C / P.R;   // in units of the radius
     const refl = 1 - P.absorb;
-    // Strop nesmie byť len globálny: lúče sa trasujú po poradí, takže pri veľkom
-    // poslucháčovi by prvé lúče minuli všetky miesta a na ostatné by nezvýšilo nič.
+    // The ceiling must not be global only: rays are traced in order, so with a large
+    // listener the first rays would take every slot and leave nothing for the rest.
     const perRay = Math.max(2, Math.ceil(MAXTAPS/Math.max(1, P.n)));
-    let lost = 0, used = 0;
+    // A shared budget of ray segments, divided evenly, so the trace costs the same no
+    // matter how small the chamber is. Rays that never reach the listener used to bounce
+    // to the cap and cost time for nothing; nothing audible depends on them. The plugin
+    // bounds its trace the same way, for the same reason.
+    let budget = MAXSEG;
+    const perSeg = Math.min(600, Math.max(24, Math.floor(MAXSEG/Math.max(1, P.n))));
+    let used = 0;
     for(let j=0;j<P.n;j++){
       const th = (j + 0.5)*2*Math.PI/P.n;
       let O = {x:SRC.x, y:SRC.y}, d = {x:Math.cos(th), y:Math.sin(th)};
-      let cur = srcRoom, acc = 0, b = 0, amp = 1, leg0 = 0, mine = 0;
-      for(let guard=0; guard<3000; guard++){
-        const h = hitCircle(O, d, rs[cur]), p = h.p, segLen = h.t;
+      let cur = srcCham, acc = 0, b = 0, amp = 1, leg0 = 0, mine = 0;
+      for(let guard=0; guard<perSeg && budget > 0; guard++, budget--){
+        const h = hitCircle(O, d, chs[cur]), p = h.p, segLen = h.t;
         if(guard === 0) leg0 = segLen;
         const cr = crossListener(O, d, segLen);
         if(cr && mine < perRay && taps.length < MAXTAPS && (acc + cr.at) < maxpath){
@@ -810,51 +873,51 @@ en: [
         }
         acc += segLen;
         let into = -1;
-        for(let q=0;q<rs.length;q++) if(q !== cur && inside(p, rs[q])){ into = q; break; }
-        if(into >= 0){ cur = into; }                       // otvorom preletí bez odrazu
+        for(let q=0;q<chs.length;q++) if(q !== cur && inside(p, chs[q])){ into = q; break; }
+        if(into >= 0){ cur = into; }                       // flies through the opening without a bounce
         else {
-          const n = {x:(p.x - rs[cur].cx)/rs[cur].r, y:(p.y - rs[cur].cy)/rs[cur].r};
+          const n = {x:(p.x - chs[cur].cx)/chs[cur].r, y:(p.y - chs[cur].cy)/chs[cur].r};
           d = reflect(d, n); b += 1; amp *= refl;
         }
         O = {x:p.x + d.x*1e-5, y:p.y + d.y*1e-5};
-        if(!(acc < maxpath && amp > 0.0015 && mine < perRay && taps.length < MAXTAPS && b < 400)) break;
+        if(!(acc < maxpath && amp > 0.0015 && mine < perRay && taps.length < MAXTAPS)) break;
       }
-      if(amp > 0.0015) lost += 1;
       if(mine > 0) used += 1;
     }
-    // Normujeme podľa skutočne zachytenej energie, nie podľa počtu zásahov —
-    // inak by pár náhodných neskorých zásahov znelo o desiatky dB inak než roj.
+    // Normalised by the energy actually captured, not by the number of hits -
+    // otherwise a few random late hits would sound tens of dB apart from a swarm.
     let e = 0; for(const t of taps) e += t.amp*t.amp;
-    // Energetické normovanie platí, len kým sú odbočky rozhádzané v čase. V symetrickej
-    // polohe (zdroj blízko stredu) prídu takmer naraz a sčítajú sa priamo — vtedy
-    // rozhoduje súčet amplitúd v tom istom milisekundovom okne, nie ich energia.
-    const bin = new Map();
-    for(const t of taps){
-      const k = Math.round(t.path*P.R/C*1000);
-      bin.set(k, (bin.get(k) || 0) + t.amp);
-    }
-    let cpk = 0;
-    for(const [k, v] of bin){                       // okno ±2 ms, nie jediná priehradka
-      let sum = 0;
-      for(let d=-2; d<=2; d++) sum += bin.get(k+d) || 0;
+    // Energy normalisation only holds while the taps are spread out in time. In a symmetric
+    // layout (source near the centre) they arrive almost together and add coherently - then
+    // the sum of amplitudes within the same millisecond window decides, not their energy.
+    // Sorted by arrival, the window is one pass with two pointers. Millisecond bins were
+    // cheaper still but their window came out 4.5 ms wide instead of 4, which read as a
+    // level difference of up to 1.8 dB against the plugin. This matches it exactly.
+    const byT = taps.map(t => ({t:t.path*P.R/C, a:t.amp})).sort((x, y) => x.t - y.t);
+    let cpk = 0, lo = 0, hi = 0, sum = 0;
+    for(let k=0;k<byT.length;k++){
+      while(hi < byT.length && byT[hi].t - byT[k].t < 0.002){ sum += byT[hi].a; hi++; }
+      while(byT[k].t - byT[lo].t >= 0.002){ sum -= byT[lo].a; lo++; }
       if(sum > cpk) cpk = sum;
     }
     const g = Math.min(0.62/Math.sqrt(Math.max(1e-9, e)), 0.5/Math.max(1e-9, cpk));
+    let mn = Infinity, mx = 0, tot = 0;
     for(const t of taps){
       t.g = t.amp*g;
-      // sila rozpadu: koľko odrazov už má za sebou + koľko sekúnd letí
+      // decay strength: how many bounces it already has + how many seconds it has flown
       t.s = clamp(t.b*P.decB + (t.path*P.R/C)*P.decT, 0, 1);
+      const L = t.path*P.R;
+      if(L < mn) mn = L;
+      if(L > mx) mx = L;
+      tot += L;
     }
-    // štatistika dráh do okienka so stavom
-    const len = taps.map(t => t.path*P.R).sort((a, b) => a - b);
-    lastStat = len.length
-      ? {n:len.length, used, min:len[0], avg:len.reduce((a, b) => a + b, 0)/len.length,
-         max:len[len.length-1]}
+    lastStat = taps.length
+      ? {n:taps.length, used, min:mn, avg:tot/taps.length, max:mx}
       : {n:0, used:0, min:0, avg:0, max:0};
-    lastTaps = taps; lastLost = lost;
+    lastTaps = taps;
     return taps;
   }
-  let lastTaps = [], lastLost = 0;
+  let lastTaps = [];
   let lastStat = {n:0, used:0, min:0, avg:0, max:0};
   const BUCKETS = [0,1,2,3,4,6,8,12,16,24,32,48];
   const bucketOf = b => { let i = 0; while(i+1 < BUCKETS.length && BUCKETS[i+1] <= b) i++; return i; };
@@ -868,22 +931,22 @@ en: [
     return Math.min(Math.min(P.trace, 8), perBounce*(-6.908/Math.log(1-P.absorb)));
   }
 
-  /* ================= rozpad chvosta na fundamenty =================
-     Každý zásah nesie „silu rozpadu" s: koľko odrazov už má za sebou a ako
-     dlho letí. Sila sa kvantuje do štyroch stupňov, aby na celý chvost stačili
-     štyri procesory a nie jeden na každý zásah. Stupeň dostane priemernú silu
-     svojich zásahov — pri malých rýchlostiach rozpadu teda ostáva priehľadný. */
+  /* ================= spectral decay of the tail =================
+     Every hit carries a "decay strength" s: how many bounces it already has and
+     how long it has been flying. The strength is quantised into four stages, so
+     the whole tail needs four processors and not one per hit. A stage gets the mean
+     strength of its hits - at low decay rates it therefore stays transparent. */
   const NST = 4;
   const stageOf = s => clamp(Math.floor(s*NST), 0, NST-1);
   const decayOn = () => P.dmode > 0 && (P.decB > 0 || P.decT > 0);
   const SCALES = [
-    [1, 1.5, 2, 3, 4, 6, 8],                                  // kvinty a oktávy
-    [1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 6, 8],                    // dur
-    [1, 1.2, 1.5, 2, 2.4, 3, 4, 4.8, 6, 8],                   // mol
-    [1, 1.125, 1.5, 1.6875, 2, 2.25, 3, 3.375, 4, 4.5, 6, 8]  // pentatonika
+    [1, 1.5, 2, 3, 4, 6, 8],                                  // fifths and octaves
+    [1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 6, 8],                    // major
+    [1, 1.2, 1.5, 2, 2.4, 3, 4, 4.8, 6, 8],                   // minor
+    [1, 1.125, 1.5, 1.6875, 2, 2.25, 3, 3.375, 4, 4.5, 6, 8]  // pentatonic
   ];
 
-  // radix-2 FFT na mieste, oddelená reálna a imaginárna časť
+  // in-place radix-2 FFT, real and imaginary parts kept separate
   function fft(re, im, inv){
     const n = re.length;
     for(let i=1, j=0; i<n; i++){
@@ -910,17 +973,17 @@ en: [
     if(inv) for(let i=0;i<n;i++){ re[i] /= n; im[i] /= n; }
   }
 
-  // sínusové okno: w² sa pri polovičnom prekryve sčíta presne na 1,
-  // takže pri nulovom zásahu do spektra vyjde vstup nedotknutý
+  // sine window: at 50 % overlap w² sums to exactly 1,
+  // so with no change to the spectrum the input comes out untouched
   const NFFT = 1024, HOP = 512, BLK = HOP*2;
-  // ScriptProcessor je dvojito bufferovaný, k tomu ide vlastné oneskorenie STFT
-  // o jedno okno. O toľko treba posunúť všetko ostatné, inak by mokrý signál
-  // meškal za suchým o stovku milisekúnd.
+  // ScriptProcessor is double buffered, and on top of that the STFT has its own
+  // one-window latency. Everything else has to be shifted by that much, otherwise
+  // the wet signal would lag the dry by about a hundred milliseconds.
   const STFT_LAT = 2*BLK + HOP;
   const WIN = new Float32Array(NFFT);
   for(let i=0;i<NFFT;i++) WIN[i] = Math.sin(Math.PI*(i+0.5)/NFFT);
   let SUMWIN = 0; for(let i=0;i<NFFT;i++) SUMWIN += WIN[i];
-  // tabuľkový sínus — v syntéze sa volá desaťtisíckrát za blok, Math.sin by nestíhal
+  // table sine - synthesis calls it tens of thousands of times per block, Math.sin would not keep up
   const TB = 4096, SIN = new Float32Array(TB+1);
   for(let i=0;i<=TB;i++) SIN[i] = Math.sin(2*Math.PI*i/TB);
   function fsin(turns){
@@ -929,8 +992,8 @@ en: [
   }
 
   function makeStft(ctx, s, mode){
-    // Blok sú dve okná naraz: dosť rezervy proti zaváhaniu hlavného vlákna,
-    // ale ešte znesiteľné oneskorenie (dlhší blok ho priamo predlžuje).
+    // A block is two windows at once: enough headroom against a stall of the main
+    // thread, but still a tolerable latency (a longer block extends it directly).
     const NH = BLK/HOP;
     const node = ctx.createScriptProcessor(BLK, 2, 2);
     const sr = ctx.sampleRate, H = NFFT >> 1;
@@ -940,7 +1003,7 @@ en: [
     for(let c=0;c<2;c++) ch.push({
       inb:new Float32Array(NFFT), acc:new Float32Array(NFFT), prev:new Float32Array(HOP),
       re:new Float32Array(NFFT), im:new Float32Array(NFFT), mag:new Float32Array(H),
-      keep:new Uint8Array(H), gm:new Float32Array(H).fill(1), parts:[], quiet:0,
+      keep:new Uint8Array(H), gm:new Float32Array(H).fill(1), parts:[], quiet:0, pk:[],
       pf:new Float32Array(64), pdf:new Float32Array(64),
       pa:new Float32Array(64), pda:new Float32Array(64), pph:new Float32Array(64)
     });
@@ -955,7 +1018,7 @@ en: [
         const y = yc.subarray(hp*HOP, hp*HOP + HOP);
         st.inb.copyWithin(0, HOP); st.inb.set(x, NFFT-HOP);
 
-        // ticho na vstupe: FFT netreba, len dobehne, čo je v zásobníku
+        // silence at the input: no FFT needed, just flush what is left in the buffer
         let mxin = 0;
         for(let i=0;i<HOP;i++){ const a = x[i] < 0 ? -x[i] : x[i]; if(a > mxin) mxin = a; }
         st.quiet = mxin < 1e-7 ? st.quiet + 1 : 0;
@@ -971,17 +1034,20 @@ en: [
         fft(st.re, st.im, false);
         for(let i=0;i<H;i++){ const a = st.re[i], b = st.im[i]; st.mag[i] = Math.sqrt(a*a + b*b); }
 
-        const pk = [];
+        // one peak list per channel, reused - this runs on the audio path and a fresh
+        // array every hop was the only allocation left in it
+        const pk = st.pk;
+        pk.length = 0;
         for(let i=2;i<H-1;i++) if(st.mag[i] > st.mag[i-1] && st.mag[i] >= st.mag[i+1]) pk.push(i);
         pk.sort((a,b) => st.mag[b] - st.mag[a]);
 
-        if(mode === 1){                       // spektrálne sito
+        if(mode === 1){                       // spectral gate
           st.keep.fill(0);
           const K = Math.min(keepBins, pk.length);
           for(let q=0;q<K;q++){ const i = pk[q]; st.keep[i]=1; st.keep[i-1]=1; if(i+1<H) st.keep[i+1]=1; }
           st.re[0]=0; st.im[0]=0;
-          // maska sa nezapína a nevypína skokom — inak vzniká „bublanie" (musical noise),
-          // keď sa zoznam ponechaných vrcholov mení z okna na okno
+          // the mask does not switch on and off in a step - otherwise musical noise appears
+          // when the list of kept peaks changes from window to window
           for(let i=1;i<H;i++){
             const tgt = st.keep[i], g0 = st.gm[i];
             const gg = g0 + (tgt - g0)*(tgt > g0 ? 0.5 : 0.12);
@@ -993,7 +1059,7 @@ en: [
           for(let i=0;i<NFFT;i++) st.acc[i] += st.re[i]*WIN[i];
           for(let i=0;i<HOP;i++) y[i] = (1-s)*st.prev[i] + s*st.acc[i];
           st.acc.copyWithin(0, HOP); st.acc.fill(0, NFFT-HOP);
-        } else {                              // sínusová resyntéza
+        } else {                              // sinusoidal resynthesis
           const K = Math.min(keepPart, pk.length), np = [];
           for(let q=0;q<K;q++){
             const i = pk[q], m0 = st.mag[i-1], m1 = st.mag[i], m2 = st.mag[i+1];
@@ -1020,7 +1086,7 @@ en: [
             const o = st.parts[q];
             np.push({f:o.f, f0:o.f, a:0, a0:o.a, ph:o.ph, dying:true});
           }
-          // ploché polia — v hlavnej slučke sa nesmie siahať na vlastnosti objektov
+          // flat arrays - the main loop must not touch object properties
           const M = Math.min(np.length, 64);
           const pf = st.pf, pdf = st.pdf, pa = st.pa, pda = st.pda, pph = st.pph;
           for(let q=0;q<M;q++){
@@ -1053,7 +1119,7 @@ en: [
     const inp = ctx.createGain(), out = ctx.createGain();
     const plain = {in:inp, out, s, dispose(){}};
     if(mode === 0 || s < 0.02){
-      // obídený stupeň musí dostať rovnaké oneskorenie ako tie, čo idú cez FFT
+      // a bypassed stage must get the same latency as the ones going through the FFT
       if(stftMode(mode)){
         const d = ctx.createDelay(1);
         d.delayTime.value = STFT_LAT/ctx.sampleRate;
@@ -1062,7 +1128,7 @@ en: [
       return plain;
     }
 
-    if(mode === 4){                                   // postupné stmavovanie
+    if(mode === 4){                                   // progressive lowpass
       const f = Math.max(45, 20000*Math.pow(1-s, 4));
       let node = inp;
       for(let i=0;i<2;i++){
@@ -1070,11 +1136,11 @@ en: [
         lp.type = 'lowpass'; lp.Q.value = -3; lp.frequency.value = nyq(ctx, f);
         node.connect(lp); node = lp;
       }
-      const mk = ctx.createGain(); mk.gain.value = 1 + 2.4*s;   // náhrada za odobraté výšky
+      const mk = ctx.createGain(); mk.gain.value = 1 + 2.4*s;   // make-up for the removed highs
       node.connect(mk); mk.connect(out);
       return plain;
     }
-    if(mode === 2){                                   // rezonančná banka
+    if(mode === 2){                                   // resonator bank
       const rat = SCALES[clamp(P.dscale|0, 0, SCALES.length-1)];
       const q = Math.min(200, 10 + 240*s*s);
       const bank = ctx.createGain();
@@ -1086,8 +1152,8 @@ en: [
         bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q;
         inp.connect(bp); bp.connect(bank); cnt++;
       }
-      // úzka priepusť prepustí energiu úmerne f0/Q, takže náhrada musí rásť s odmocninou
-      // z Q a klesať so základným tónom — inak sa hlasitosť mení pri ladení banky
+      // a narrow bandpass passes energy proportional to f0/Q, so the make-up has to grow with the
+      // square root of Q and fall with the root note - otherwise the level changes with tuning
       bank.gain.value = cnt ? Math.min(7, 0.88*Math.sqrt(q/cnt)*Math.sqrt(220/Math.max(20, P.droot))) : 0;
       const wg = ctx.createGain(); wg.gain.value = s;
       const dg = ctx.createGain(); dg.gain.value = 1 - s;
@@ -1095,23 +1161,23 @@ en: [
       inp.connect(dg); dg.connect(out);
       return plain;
     }
-    const sp = makeStft(ctx, s, mode);               // 1 = sito, 3 = sínusy
+    const sp = makeStft(ctx, s, mode);               // 1 = gate, 3 = sines
     inp.connect(sp); sp.connect(out);
     return {in:inp, out, s, dispose(){ sp.onaudioprocess = null; try{ sp.disconnect(); }catch(x){} }};
   }
 
-  /* ================= audio graf ================= */
+  /* ================= audio graph ================= */
   function buildGraph(ctx){
     const input = ctx.createGain();
     const dry = ctx.createGain(); dry.gain.value = Math.cos(P.mix*Math.PI/2);
     const wet = ctx.createGain(); wet.gain.value = Math.sin(P.mix*Math.PI/2)*2.2;
     const master = ctx.createGain(); master.gain.value = Math.pow(10, P.out/20);
     const comp = ctx.createDynamicsCompressor();
-    // mäkký a pomalý — energia je normovaná, takže tvrdý limiter netreba a jeho
-    // rýchle zosilňovanie po každej prestavbe bolo počuť ako dýchanie
+    // soft and slow - the energy is normalised, so a hard limiter is not needed and its
+    // fast recovery after every rebuild was audible as breathing
     comp.threshold.value=-4; comp.knee.value=12; comp.ratio.value=6;
     comp.attack.value=0.02; comp.release.value=0.35;
-    // suchý signál sa zarovná s mokrým, keď mokrý ide cez FFT
+    // the dry signal is aligned with the wet one when the wet goes through the FFT
     const lat = (decayOn() && stftMode(P.dmode)) ? STFT_LAT/ctx.sampleRate : 0;
     if(lat > 0){
       const dd = ctx.createDelay(1); dd.delayTime.value = lat;
@@ -1119,8 +1185,8 @@ en: [
     } else input.connect(dry);
     dry.connect(master);
 
-    // jedna filtrovaná zbernica na skupinu počtu odrazov (filter a oneskorenie
-    // sa dajú zameniť, takže filtrujeme raz pred delayom a nie pri každom zásahu)
+    // one filtered bus per bounce-count group (filtering and delay
+    // commute, so we filter once before the delay and not at every hit)
     const buses = BUCKETS.map((_, i) => {
       const f = ctx.createBiquadFilter();
       f.type = 'lowpass'; f.Q.value = -3; f.frequency.value = bucketHz(ctx, i);
@@ -1130,7 +1196,7 @@ en: [
 
     const taps = traceTaps();
 
-    // stupne rozpadu — priemerná sila zásahov, ktoré do stupňa spadli
+    // decay stages - the mean strength of the hits that fell into the stage
     const useDec = decayOn();
     let stages = null;
     if(useDec){
@@ -1159,7 +1225,7 @@ en: [
       return {t, dl, g, pan};
     });
 
-    // držanie po zásahu: štyri hrebene s nesúdeliteľnými dĺžkami
+    // hold after hit: four combs with mutually prime lengths
     const holds = [];
     if(P.hold >= 0.02){
       const sum = ctx.createGain(); sum.gain.value = 0.25*1.4;
@@ -1179,15 +1245,15 @@ en: [
     }
 
     wet.connect(master); master.connect(comp);
-    // vlastný člen na prelínanie: pri prestavbe sa starý graf stlmí a nový zosilnie,
-    // takže sa nikdy neseká chvost uprostred vlny
+    // a dedicated node for the crossfade: on a rebuild the old graph fades out and the new one in,
+    // so the tail is never cut mid-wave
     const fade = ctx.createGain();
     comp.connect(fade);
     return {input, dry, wet, master, comp, fade, buses, nodes, holds, taps, stages,
             dispose(){ if(stages) for(const st of stages) if(st) st.dispose(); }};
   }
 
-  /* ================= živý kontext ================= */
+  /* ================= live context ================= */
   let ctx=null, graph=null, analyser=null, srcNode=null, micStream=null;
   let srcBus=null, loopBus=null, liveIn=null, recProc=null, outProc=null, sink=null, monitor=null;
   let files=[], sel=-1, playing=false, phase=0, lastT=0, rebuildTimer=null;
@@ -1198,9 +1264,9 @@ en: [
     srcBus = ctx.createGain(); loopBus = ctx.createGain(); liveIn = ctx.createGain();
     srcBus.connect(liveIn); loopBus.connect(liveIn);
     sink = ctx.createGain(); sink.gain.value = 0; sink.connect(ctx.destination);
-    monitor = ctx.createGain(); monitor.connect(sink);   // stály odbočný bod na meranie
+    monitor = ctx.createGain(); monitor.connect(sink);   // a permanent tap point for measurement
     analyser = ctx.createAnalyser(); analyser.fftSize = 1024;
-    analyser.connect(ctx.destination);                  // jeden na celú reláciu
+    analyser.connect(ctx.destination);                  // one for the whole session
     if(ctx.createScriptProcessor){
       recProc = ctx.createScriptProcessor(4096, 2, 2);
       recProc.onaudioprocess = onLoopRec;
@@ -1212,7 +1278,7 @@ en: [
     rebuild();
     return ctx;
   }
-  const xfadeSec = () => Math.max(0.001, P.xfade/1000);   // dĺžka prelínania, parameter
+  const xfadeSec = () => Math.max(0.001, P.xfade/1000);   // crossfade length, a parameter
   function rebuild(){
     if(!ctx) return;
     const old = graph, t = ctx.currentTime;
@@ -1222,14 +1288,14 @@ en: [
     if(monitor) g.fade.connect(monitor);
     liveIn.connect(g.input);
     if(old){
-      // starý graf ešte dohrá svoj chvost a až potom sa odpojí
+      // the old graph plays out its tail and only then disconnects
       g.fade.gain.setValueAtTime(0, t);
       const XF = xfadeSec();
       g.fade.gain.linearRampToValueAtTime(1, t + XF);
-      // starý graf dostáva vstup ďalej, kým sa prelína — inak by suchý signál na chvíľu zmizol
+      // the old graph keeps receiving input while it crossfades - otherwise the dry signal would vanish for a moment
       try{
-        // starý graf mohol byť sám uprostred nábehu — jeho naplánované body treba
-        // zrušiť, inak by sa gain uprostred stlmovania vrátil späť hore
+        // the old graph may itself have been mid-ramp - its scheduled points have to be
+        // cancelled, otherwise the gain would climb back up in the middle of the fade
         const gp = old.fade.gain;
         if(gp.cancelAndHoldAtTime) gp.cancelAndHoldAtTime(t);
         else { const v = gp.value; gp.cancelScheduledValues(t); gp.setValueAtTime(v, t); }
@@ -1245,7 +1311,7 @@ en: [
     graph = g;
   }
   function scheduleRebuild(){
-    if(!ctx) traceTaps();          // pred zapnutím zvuku sa graf nestavia, ale kresliť treba
+    if(!ctx) traceTaps();          // before the audio is started the graph is not built, but drawing is still needed
     hints();
     clearTimeout(rebuildTimer);
     rebuildTimer = setTimeout(()=>{ rebuild(); hints(); }, 350);
@@ -1260,14 +1326,14 @@ en: [
     graph.nodes.forEach(nd => {
       nd.dl.delayTime.setValueAtTime(nd.dl.delayTime.value, t);
       nd.dl.delayTime.linearRampToValueAtTime(clamp(nd.t.path*P.R/C, 0, 8.9), t + 0.06);
-      // panoráma zo smeru lúča v okamihu zásahu, nie z uhla vyžiarenia
+      // panning from the ray direction at the moment of the hit, not from the launch angle
       if(nd.pan) nd.pan.pan.setTargetAtTime(clamp(nd.t.px*P.width, -1, 1), t, 0.05);
     });
   }
 
-  /* Doppler: zdroj naozaj obieha. Presne prepočítame prvú etapu dráhy každého
-     zásahu; zvyšok trajektórie sa dorovná až pri najbližšom prepočte, lebo
-     pretrasovať desiatky lúčov každých pár milisekúnd by bolo drahé. */
+  /* Doppler: the source really orbits. We recompute the first leg of every hit's
+     path exactly; the rest of the trajectory catches up only at the next rebuild,
+     because retracing dozens of rays every few milliseconds would be expensive. */
   setInterval(()=>{
     if(!ctx || !graph) return;
     const now = performance.now()/1000;
@@ -1275,8 +1341,8 @@ en: [
     const rad = Math.hypot(SRC.x, SRC.y);
     if(P.vel > 0 && rad > 0.01 && !dragging){
       srcAng += (P.vel/(rad*P.R))*dt;
-      const rs = place();
-      const t = ctx.currentTime, main = rs[srcRoom];
+      const chs = place();
+      const t = ctx.currentTime, main = chs[srcCham];
       graph.nodes.forEach(nd => {
         const th = nd.t.th;
         const h = hitCircle(SRC, {x:Math.cos(th), y:Math.sin(th)}, main);
@@ -1287,22 +1353,26 @@ en: [
     }
   }, 55);
 
-  /* ================= zdroje ================= */
+  /* ================= sources ================= */
   function stopPlayback(){
     clearInterval(seamTimer); seamTimer = null;
     if(srcGain){ try{ srcGain.disconnect(); }catch(e){} srcGain = null; }
     if(srcNode){ try{ srcNode.stop && srcNode.stop(); }catch(e){} try{ srcNode.disconnect(); }catch(e){} srcNode=null; }
     playing = false; $('play').textContent = T.play;
   }
-  /* Slučka sa vracia na začiatok súboru uprostred vlny — na šve preto stlmíme
-     signál na 6 ms. Bez toho luplo pri každom opakovaní. */
+  /* The loop returns to the start of the file mid-wave - so at the seam we fade the
+     signal down over 6 ms. Without that it clicked on every repeat. */
   let srcGain = null, seamTimer = null;
   function seams(g, startAt, dur){
+    // Enough seams to cover the interval until the next planning pass, plus a margin.
+    // A fixed six ran out on very short loops and the click came back.
+    const every = Math.max(400, dur*2500);
+    const ahead = Math.ceil(every/1000/dur) + 4;
     const F = 0.006, plan = () => {
       if(!playing || !ctx) return;
       const now = ctx.currentTime;
       let k = Math.max(1, Math.ceil((now - startAt)/dur));
-      for(let i=0;i<6;i++,k++){
+      for(let i=0;i<ahead;i++,k++){
         const at = startAt + k*dur;
         if(at - F <= now) continue;
         g.gain.setValueAtTime(1, at - F);
@@ -1312,7 +1382,7 @@ en: [
     };
     plan();
     clearInterval(seamTimer);
-    seamTimer = setInterval(plan, Math.max(400, dur*2500));
+    seamTimer = setInterval(plan, every);
   }
   function stopAll(){
     stopPlayback();
@@ -1326,7 +1396,7 @@ en: [
     const g = ctx.createGain();
     const t0 = ctx.currentTime + 0.02;
     g.gain.setValueAtTime(0, t0);
-    g.gain.linearRampToValueAtTime(1, t0 + 0.006);      // mäkký nábeh, nie lupnutie
+    g.gain.linearRampToValueAtTime(1, t0 + 0.006);      // a soft attack, not a click
     s2.connect(g); g.connect(srcBus); s2.start(t0);
     srcNode = s2; srcGain = g; playing = true; $('play').textContent = T.stopPlay;
     seams(g, t0, f.buf.duration);
@@ -1367,7 +1437,7 @@ en: [
         if(e.target.classList.contains('rm')){
           const wasSel = i === sel;
           files.splice(i, 1);
-          if(i < sel) sel -= 1;                     // inak by sa vybral iný súbor
+          if(i < sel) sel -= 1;                     // otherwise a different file would be picked
           sel = Math.min(sel, files.length - 1);
           if(wasSel && playing) stopPlayback();
           $('play').disabled = files.length === 0;
@@ -1390,7 +1460,7 @@ en: [
   }
   let micNode = null, micBusy = false;
   async function toggleMic(){
-    if(micBusy) return;                       // druhý klik počas pýtania povolenia
+    if(micBusy) return;                       // a second click while permission is being asked for
     if(micStream){
       micStream.getTracks().forEach(t=>t.stop()); micStream = null;
       if(micNode){ try{ micNode.disconnect(); }catch(e){} micNode = null; }
@@ -1402,7 +1472,7 @@ en: [
       const st = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
       if(micStream){ st.getTracks().forEach(t=>t.stop()); return; }
       micStream = st;
-      micNode = ctx.createMediaStreamSource(micStream);   // musí byť v premennej
+      micNode = ctx.createMediaStreamSource(micStream);   // has to live in a variable
       micNode.connect(srcBus);
       $('mic').classList.add('on');
       say(M.micOn(), 'ok');
@@ -1420,7 +1490,7 @@ en: [
     rec:false, chunks:[], frames:0, dubAt:0, startT:0
   }));
 
-  // kde v slucke prave sme, v sekundach
+  // where in the loop we are, in seconds
   function loopPhase(lp){
     if(!lp.buf || !lp.playing) return 0;
     const d = lp.buf.duration;
@@ -1438,7 +1508,7 @@ en: [
   }
   function startRec(lp){
     lp.chunks = []; lp.frames = 0; lp.rec = true;
-    lp.dubAt = lp.buf ? loopPhase(lp) : 0;      // odkial sa bude prekryvat
+    lp.dubAt = lp.buf ? loopPhase(lp) : 0;      // where the overdub starts
     paintLoops();
   }
   function stopRec(lp){
@@ -1454,8 +1524,8 @@ en: [
       b.getChannelData(0).set(L); b.getChannelData(1).set(R);
       lp.buf = b;
     }else{
-      // prekrytie: nove sa primiesa do existujucej slucky od miesta, kde nahravanie zacalo,
-      // dlzka slucky sa nemeni - co pretecie za koniec, pokracuje od zaciatku
+      // overdub: the new take is mixed into the existing loop from where recording started,
+      // the loop length does not change - whatever runs past the end continues from the start
       const wasPlaying = lp.playing, ph = loopPhase(lp), len = lp.buf.length;
       const nb = ctx.createBuffer(2, len, ctx.sampleRate);
       const dL = nb.getChannelData(0), dR = nb.getChannelData(1);
@@ -1502,7 +1572,7 @@ en: [
     ensureCtx(); ctx.resume();
     const lp = loops[i];
     lp.playing ? stopPlay(lp) : (lp.buf ? startPlay(lp, 0)
-      : say('Stopa ' + (i+1) + ' je prázdna — najprv ju nahraj horným tlačidlom.'));
+      : say(M.laneEmpty(i+1)));
   }
   function clearLoop(i){
     const lp = loops[i];
@@ -1511,7 +1581,7 @@ en: [
     paintLoops();
   }
 
-  /* ---- gombík hlasitosti stopy ---- */
+  /* ---- track volume knob ---- */
   const KMIN = 0, KMAX = 1.5;
   function knobPt(deg, r){
     const a = (deg - 90) * Math.PI/180;
@@ -1530,8 +1600,7 @@ en: [
     const ln = $('kp'+i);
     ln.setAttribute('x1', px.toFixed(2)); ln.setAttribute('y1', py.toFixed(2));
     ln.setAttribute('x2', qx.toFixed(2)); ln.setAttribute('y2', qy.toFixed(2));
-    $('kn'+i).parentNode.title = 'Hlasitosť stopy ' + Math.round(lp.vol*100) +
-      ' % — ťahaj hore/dole, dvojklik vráti 100 %';
+    $('kn'+i).parentNode.title = M.knobTitle(Math.round(lp.vol*100));
   }
   function setVol(i, v){
     const lp = loops[i];
@@ -1596,12 +1665,12 @@ en: [
     if(/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
     const i = '12345678'.indexOf(e.key);
     if(i >= 0){ e.preventDefault(); e.shiftKey ? toggleRec(i) : togglePlay(i); return; }
-    // so Shiftom davaju cislice na niektorych rozlozeniach ine znaky
+    // with Shift the digits give different characters on some layouts
     const j = '!@#$%^&*'.indexOf(e.key);
     if(j >= 0){ e.preventDefault(); toggleRec(j); }
   });
 
-  /* ================= nahrávanie výstupu ================= */
+  /* ================= output recording ================= */
   let outRec = null;
   function onOutRec(e){
     if(!outRec) return;
@@ -1625,10 +1694,10 @@ en: [
     const buf = ctx.createBuffer(2, r.frames, ctx.sampleRate);
     const L = buf.getChannelData(0), R = buf.getChannelData(1);
     let o = 0; for(const ch of r.chunks){ L.set(ch[0], o); R.set(ch[1], o); o += ch[0].length; }
-    saveAudio(buf, 'komora_zaznam');
+    saveAudio(buf, M.outFile());
   }
 
-  /* ================= render súboru + uloženie ================= */
+  /* ================= file render + save ================= */
   async function render(){
     const f = files[sel];
     if(!f) return;
@@ -1639,17 +1708,16 @@ en: [
       const sr = buffer.sampleRate;
       const dur = Math.min(600, buffer.duration + tailSec() + P.hold + 0.4);
       const off = new OfflineAudioContext(2, Math.ceil(dur*sr), sr);
-      const keep = {x:SRC.x, y:SRC.y};
       const g = buildGraph(off);
       g.comp.connect(off.destination);
       const s = off.createBufferSource(); s.buffer = buffer; s.connect(g.input); s.start(0);
-      if(P.vel > 0){                                  // naplánovaný Doppler na celú dĺžku
+      if(P.vel > 0){                                  // Doppler scheduled for the whole length
         const rad = Math.hypot(SRC.x, SRC.y);
         if(rad > 0.01){
-          const w = P.vel/(rad*P.R), a0 = Math.atan2(SRC.y, SRC.x), main = rooms()[0];
+          const w = P.vel/(rad*P.R), a0 = Math.atan2(SRC.y, SRC.x), main = chambers()[0];
           g.nodes.forEach(nd => nd.dl.delayTime.setValueAtTime(nd.dl.delayTime.value, 0));
-          // krok podľa toho, ako rýchlo sa dráha naozaj mení, a najviac 12 000 bodov
-          // na odbočku — inak by sa pri dlhom súbore naplánovali milióny udalostí
+          // a step matched to how fast the path actually changes, and at most 12 000 points
+          // per tap - otherwise a long file would schedule millions of events
           const step = clamp(0.35/Math.max(0.05, w), 0.02, 0.5);
           const dt = Math.max(step, dur*g.nodes.length/240000);
           for(let t=dt;t<dur;t+=dt){
@@ -1662,9 +1730,8 @@ en: [
           }
         }
       }
-      SRC = keep;
       const out = await off.startRendering();
-      await saveAudio(out, (f.name.replace(/\.[^.]+$/,'') || 'zvuk') + '_komora_' + P.R.toFixed(0) + 'm');
+      await saveAudio(out, M.renderFile(f.name.replace(/\.[^.]+$/,'') || M.untitled(), P.R.toFixed(0)));
     }catch(e){ say(M.renderFail(e.message), 'err'); }
     $('render').disabled = false;
   }
@@ -1679,7 +1746,7 @@ en: [
     let dl = null;
     try{ dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; }catch(e){}
     if(dl){
-      // v publikovanej stránke ide uloženie cez potvrdenie prehliadača a povolený formát je WebM
+      // in the published page saving goes through the browser dialog and the allowed format is WebM
       try{
         say(M.toWebm(buf.duration.toFixed(1)));
         const blob = await toWebm(buf);
@@ -1699,16 +1766,16 @@ en: [
 
   function toWebm(buf){
     return new Promise((res, rej) => {
-      if(typeof MediaRecorder === 'undefined') return rej(new Error('MediaRecorder nie je dostupný'));
+      if(typeof MediaRecorder === 'undefined') return rej(new Error(M.noRecorder()));
       const mime = ['audio/webm;codecs=opus','audio/webm'].find(m => MediaRecorder.isTypeSupported(m));
-      if(!mime) return rej(new Error('WebM nie je podporovaný'));
+      if(!mime) return rej(new Error(M.noWebm()));
       const ac = new (window.AudioContext||window.webkitAudioContext)();
       const dest = ac.createMediaStreamDestination();
       const src = ac.createBufferSource(); src.buffer = buf; src.connect(dest);
       const rec = new MediaRecorder(dest.stream, {mimeType:mime, audioBitsPerSecond:192000});
       const chunks = [];
       rec.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
-      rec.onerror = e => { try{ ac.close(); }catch(x){} rej(e.error || new Error('chyba nahrávania')); };
+      rec.onerror = e => { try{ ac.close(); }catch(x){} rej(e.error || new Error(M.recError())); };
       rec.onstop = () => { try{ ac.close(); }catch(x){} res(new Blob(chunks, {type:'audio/webm'})); };
       src.onended = () => setTimeout(() => { if(rec.state !== 'inactive') rec.stop(); }, 300);
       rec.start(); src.start();
@@ -1733,12 +1800,20 @@ en: [
     return dv.buffer;
   }
 
-  /* ================= vizualizácia ================= */
-  const cv = $('cv'), g2 = cv.getContext('2d');
+  /* ================= visualisation ================= */
+  const cv = $('cv'), g2 = cv.getContext('2d'), mtrEl = $('mtr');
+  let meterBuf = null;
   const VIEW = {cx:0, cy:0, s:1, w:0, h:0, dpr:1};
-  // Plátno vypĺňa svoj stĺpec a kreslí sa v CSS pixeloch, takže na hustých
-  // displejoch nie je rozmazané a na úzkom okne nezmenšuje ciele na ťahanie.
+  // The canvas fills its column and is drawn in CSS pixels, so it is not blurry on
+  // dense displays and does not shrink the drag targets on a narrow window.
+  // Measuring the canvas forces the browser to lay the page out, so doing it inside the
+  // draw loop cost a layout on every frame. A ResizeObserver reports the size instead and
+  // the loop only reads it. The first measurement still happens here, before the observer
+  // has fired.
+  let canvasDirty = true;
   function fitCanvas(){
+    if(!canvasDirty) return;
+    canvasDirty = false;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const r = cv.getBoundingClientRect();
     const w = Math.max(160, Math.round(r.width)), h = Math.max(160, Math.round(r.height));
@@ -1747,23 +1822,26 @@ en: [
     }
     VIEW.w = w; VIEW.h = h; VIEW.dpr = dpr;
   }
+  if(window.ResizeObserver) new ResizeObserver(() => { canvasDirty = true; }).observe(cv);
+  else window.addEventListener('resize', () => { canvasDirty = true; });
+  window.addEventListener('resize', () => { canvasDirty = true; });
 
   const toScreen = p => ({x: VIEW.cx + p.x*VIEW.s, y: VIEW.cy + p.y*VIEW.s});
   const toWorld = (x,y) => ({x:(x - VIEW.cx)/VIEW.s, y:(y - VIEW.cy)/VIEW.s});
 
-  // Kreslíme presne to, čo počíta zvuk: odrazy, prelety otvormi a zásahy.
-  function walkDraw(O0, theta, steps, rs){
+  // We draw exactly what the audio computes: bounces, passes through openings and hits.
+  function walkDraw(O0, theta, steps, chs){
     const pts = [{x:O0.x, y:O0.y}], gaps = [], hits = [];
-    let O = {x:O0.x, y:O0.y}, d = {x:Math.cos(theta), y:Math.sin(theta)}, cur = srcRoom;
+    let O = {x:O0.x, y:O0.y}, d = {x:Math.cos(theta), y:Math.sin(theta)}, cur = srcCham;
     for(let s2=0;s2<steps;s2++){
-      const h = hitCircle(O, d, rs[cur]), p = h.p;
+      const h = hitCircle(O, d, chs[cur]), p = h.p;
       const cr = crossListener(O, d, h.t);
       if(cr) hits.push({x:O.x + cr.at*d.x, y:O.y + cr.at*d.y});
       pts.push(p);
       let into = -1;
-      for(let q=0;q<rs.length;q++) if(q !== cur && inside(p, rs[q])){ into = q; break; }
+      for(let q=0;q<chs.length;q++) if(q !== cur && inside(p, chs[q])){ into = q; break; }
       if(into >= 0){ gaps.push(pts.length-1); cur = into; }
-      else { const n = {x:(p.x-rs[cur].cx)/rs[cur].r, y:(p.y-rs[cur].cy)/rs[cur].r}; d = reflect(d, n); }
+      else { const n = {x:(p.x-chs[cur].cx)/chs[cur].r, y:(p.y-chs[cur].cy)/chs[cur].r}; d = reflect(d, n); }
       O = {x:p.x + d.x*1e-5, y:p.y + d.y*1e-5};
     }
     return {pts, gaps, hits};
@@ -1774,7 +1852,7 @@ en: [
     fitCanvas();
     const W = VIEW.w, H = VIEW.h;
     g2.setTransform(VIEW.dpr, 0, 0, VIEW.dpr, 0, 0);
-    const cl = rooms();
+    const cl = chambers();
     let minx=-1, maxx=1, miny=-1, maxy=1;
     for(const c of cl){ minx=Math.min(minx,c.cx-c.r); maxx=Math.max(maxx,c.cx+c.r);
                         miny=Math.min(miny,c.cy-c.r); maxy=Math.max(maxy,c.cy+c.r); }
@@ -1782,7 +1860,7 @@ en: [
     VIEW.s = s; VIEW.cx = W/2 - (minx+maxx)/2*s; VIEW.cy = H/2 - (miny+maxy)/2*s;
     g2.clearRect(0,0,W,H);
 
-    // steny — bod po bode, s medzerou tam, kde je otvor do inej komory
+    // walls - point by point, with a gap where the opening into another chamber is
     for(const c of cl){
       const N = 300;
       for(let i=0;i<N;i++){
@@ -1791,7 +1869,7 @@ en: [
         const p2 = {x:c.cx + Math.cos(a2)*c.r, y:c.cy + Math.sin(a2)*c.r};
         let open = false;
         for(const o of cl){ if(o === c) continue; if(inside(p1,o) || inside(p2,o)){ open = true; break; } }
-        if(open) continue;                       // spoločnú hranicu nekreslíme
+        if(open) continue;                       // the shared boundary is not drawn
         const s1 = toScreen(p1), s2 = toScreen(p2);
         const hot = hover && hover.t === 'cham' && hover.k === c.k;
         g2.strokeStyle = hot ? 'rgba(150,190,255,.95)' : (c.k ? 'rgba(51,68,92,.8)' : '#33445C');
@@ -1809,9 +1887,9 @@ en: [
       }
     }
 
-    // lúče: rovnaká trajektória, akú počíta zvuk
+    // rays: the same trajectory the audio computes
     const shown = Math.min(P.n, 28);
-    const depth = clamp(Math.round(320/P.n), 8, 40);   // pri malo lucoch kreslime hlbsie
+    const depth = clamp(Math.round(320/P.n), 8, 40);   // with few rays we draw deeper
     for(let i=0;i<shown;i++){
       const theta = (i + 0.5)*2*Math.PI/P.n;
       let shift = 0;
@@ -1836,13 +1914,13 @@ en: [
       }
     }
 
-    // Zásahy kreslíme zo skutočného zoznamu odbočiek, nie z nakreslených čiar —
-    // čiary sa kreslia len po obmedzený počet odrazov, ale počuť je aj tie neskoršie.
+    // Hits are drawn from the real tap list, not from the drawn lines -
+    // the lines are drawn for a limited number of bounces only, but the later ones are heard too.
     const dec = decayOn();
     for(const t of lastTaps){
       const p = toScreen({x:t.hx, y:t.hy});
       const late = t.b >= depth;
-      // pri zapnutom rozpade zásah blednutím ukazuje, koľko z neho ostane
+      // with decay on, the fading of a hit shows how much of it is left
       const q = dec ? 1 - t.s : 0;
       g2.fillStyle = dec
         ? 'rgba(' + Math.round(255*q + 92*(1-q)) + ',' + Math.round(214*q + 157*(1-q)) +
@@ -1851,7 +1929,7 @@ en: [
       g2.beginPath(); g2.arc(p.x, p.y, late ? 2.2 : 3, 0, Math.PI*2); g2.fill();
     }
 
-    // stav vľavo hore — bez rámu, len tlmené čísla
+    // status, top left - no frame, just muted numbers
     (function(){
       const st = lastStat, x = 14, y0 = 16, rh = 13;
       g2.font = '400 11px "IBM Plex Mono",monospace';
@@ -1871,14 +1949,14 @@ en: [
       g2.textAlign = 'start';
     })();
 
-    // dráha obehu
+    // orbit path
     if(P.vel > 0){
       const o = toScreen({x:0,y:0});
       g2.strokeStyle = 'rgba(92,157,255,.22)'; g2.setLineDash([4,7]); g2.lineWidth = 1;
       g2.beginPath(); g2.arc(o.x, o.y, Math.hypot(SRC.x,SRC.y)*s, 0, Math.PI*2); g2.stroke(); g2.setLineDash([]);
     }
 
-    // poslucháč
+    // listener
     const l = toScreen(LIS);
     g2.strokeStyle = (hover && hover.t === 'lis') ? '#fff' : 'rgba(221,228,239,.6)'; g2.lineWidth = 1.5;
     g2.beginPath(); g2.arc(l.x, l.y, Math.max(4, P.lisR*s), 0, Math.PI*2);
@@ -1887,7 +1965,7 @@ en: [
     g2.fillStyle = '#79879C'; g2.font = '500 13px "IBM Plex Mono",monospace'; g2.textAlign = 'left';
     g2.fillText(T.lis, l.x + Math.max(4, P.lisR*s) + 8, l.y + 4);
 
-    // zdroj
+    // source
     const sp = toScreen(SRC);
     const glow = g2.createRadialGradient(sp.x, sp.y, 0, sp.x, sp.y, 22);
     glow.addColorStop(0, 'rgba(255,106,70,.85)'); glow.addColorStop(1, 'rgba(255,106,70,0)');
@@ -1898,30 +1976,32 @@ en: [
     g2.fillText(T.src, sp.x, sp.y - 16);
 
     if(analyser){
-      const a = new Uint8Array(analyser.frequencyBinCount);
-      analyser.getByteTimeDomainData(a);
-      let pk = 0; for(let i=0;i<a.length;i++){ const v = Math.abs(a[i]-128)/128; if(v > pk) pk = v; }
-      $('mtr').style.width = Math.min(100, pk*118).toFixed(1) + '%';
+      if(!meterBuf || meterBuf.length !== analyser.frequencyBinCount)
+        meterBuf = new Uint8Array(analyser.frequencyBinCount);   // one buffer, not one per frame
+      analyser.getByteTimeDomainData(meterBuf);
+      let pk = 0;
+      for(let i=0;i<meterBuf.length;i++){ const v = Math.abs(meterBuf[i]-128)/128; if(v > pk) pk = v; }
+      mtrEl.style.width = Math.min(100, pk*118).toFixed(1) + '%';
     }
   }
   requestAnimationFrame(draw);
 
-  /* ---- ťahanie zdroja a poslucháča ---- */
+  /* ---- dragging the source and the listener ---- */
   let dragging = null, hover = null;
   function evtWorld(e){
     const r = cv.getBoundingClientRect();
     return toWorld(e.clientX - r.left, e.clientY - r.top);
   }
-  // Zdroj a poslucháč majú prednosť, potom vedľajšie komory: pri okraji sa mení
-  // veľkosť, bližšie k stredu sa komora presúva.
+  // The source and the listener win, then the coupled chambers: near the rim the
+  // size changes, closer to the centre the chamber is moved.
   function pick(w){
     const ds = Math.hypot(w.x-SRC.x, w.y-SRC.y), dl = Math.hypot(w.x-LIS.x, w.y-LIS.y);
     const lgrab = clamp(P.lisR, 0.10, 0.22);
     if(ds < 0.10 && ds <= dl) return {t:'src'};
     if(dl < lgrab) return {t:'lis'};
-    const rs = rooms();
-    for(let k=1;k<rs.length;k++){
-      const c = rs[k], d = Math.hypot(w.x-c.cx, w.y-c.cy);
+    const chs = chambers();
+    for(let k=1;k<chs.length;k++){
+      const c = chs[k], d = Math.hypot(w.x-c.cx, w.y-c.cy);
       const c0 = {cx:c.cx, cy:c.cy, d:Math.hypot(c.cx, c.cy)};
       if(Math.abs(d - c.r) < 0.06) return {t:'cham', k, mode:'size', c0};
       if(d < c.r*0.55) return {t:'cham', k, mode:'move', c0};
@@ -1937,10 +2017,10 @@ en: [
   cv.addEventListener('pointermove', e => {
     const w = evtWorld(e);
     if(!dragging){ hover = pick(w); cv.classList.toggle('grab', !!hover); return; }
-    if(dragging.t === 'cham'){ /* komoru neorezávame na kruh */ }
-    const rs = rooms();
+    if(dragging.t === 'cham'){ /* a chamber is not clamped to the circle */ }
+    const chs = chambers();
     const ang = Math.atan2(w.y, w.x);
-    const rad = Math.min(Math.hypot(w.x, w.y), maxRad(ang, rs)*0.985);
+    const rad = Math.min(Math.hypot(w.x, w.y), maxRad(ang, chs)*0.985);
     const deg = (ang*180/Math.PI + 360) % 360;
     if(dragging.t === 'cham'){
       const k = dragging.k;
@@ -1952,8 +2032,8 @@ en: [
         P['c'+k+'ovl'] = clamp((dist - dmin)/(dmax - dmin), 0, 1);
         syncField('c'+k+'ang'); syncField('c'+k+'ovl');
       } else {
-        // stred si držíme z okamihu uchopenia — inak by sa polomer rozbehol,
-        // lebo vzdialenosť stredu od hlavného kruhu závisí od polomeru
+        // we keep the centre from the moment of the grab - otherwise the radius would run away,
+        // because the distance of the centre from the main circle depends on the radius
         const c = dragging.c0;
         const nr = clamp(Math.hypot(w.x-c.cx, w.y-c.cy), 0.05, 0.95);
         const dmin = 1 + nr, dmax = Math.sqrt(Math.max(0.02, 1 - nr*nr));
@@ -1980,7 +2060,7 @@ en: [
   cv.addEventListener('pointerup', endDrag);
   cv.addEventListener('pointercancel', endDrag);
 
-  /* ================= ovládací panel ================= */
+  /* ================= control panel ================= */
   const RACK = [
     {t:T.g.in, col:0, items:[
       {k:'mix',   n:T.i.mix, min:0, max:100, step:0.5, sc:100, u:'%', dec:1},
@@ -2040,7 +2120,7 @@ en: [
     ]}
   ];
 
-  // po ťahaní myšou dorovnáme slider aj číselné pole
+  // after dragging with the mouse we update the slider and the number field too
   const RITEM = {};
   RACK.forEach(m => m.items.forEach(it => { RITEM[it.k] = it; }));
   function syncField(key){
@@ -2107,7 +2187,7 @@ en: [
         };
         const settle = () => { const v = parseFloat(nb.value); apply(isFinite(v) ? v : it.min, false); };
         sl.addEventListener('input', () => apply(parseFloat(sl.value), false));
-        // po pustení slidra prestavíme hneď, nech sa nečaká na doznenie oneskorenia
+        // after releasing a slider we rebuild at once, so there is no wait for the delay to ring out
         if(it.st) sl.addEventListener('change', () => {
           clearTimeout(rebuildTimer); rebuild(); hints();
         });
@@ -2135,25 +2215,25 @@ en: [
       box.classList.toggle('hide', bank && P.dmode !== 2);
       box.classList.toggle('off', !bank && P.dmode === 0);
     });
-    // v režime banky sa do bunky nezmestia napovedy aj ladenie - napovedy idú preč,
-    // režim aj tak pomenúva výberové pole
+    // in bank mode the hints and the tuning do not both fit in the cell - the hints go away,
+    // the mode is named by the select field anyway
     const bankOn = P.dmode === 2;
     $('h-d').style.display = bankOn ? 'none' : '';
     $('h-dt').style.display = bankOn ? 'none' : '';
     $('h-d').textContent = H.dmode();
-    const perB = P.decB > 0 ? (1/P.decB).toFixed(0) + ' odrazoch' : null;
+    const perB = P.decB > 0 ? H.bounces((1/P.decB).toFixed(0)) : null;
     const perT = P.decT > 0 ? (1/P.decT).toFixed(2) + ' s' : null;
     $('h-dt').textContent = H.decRate(perB, perT);
     $('h-v').textContent = H.vel();
     $('h-k').textContent = H.cham();
     $('h-w').textContent = H.width();
-    // riadky komory sa ukážu, len keď tá komora existuje
+    // chamber rows show up only when that chamber exists
     document.querySelectorAll('.ctl[data-cham]').forEach(el => {
       el.classList.toggle('hide', +el.dataset.cham > P.cham);
     });
   }
 
-  /* ================= drôtovanie UI ================= */
+  /* ================= UI wiring ================= */
   $('play').addEventListener('click', () => { playing ? (stopPlayback(), say(M.stopped())) : playBuffer(); });
   $('mic').addEventListener('click', toggleMic);
   $('ping').addEventListener('click', ping);
@@ -2216,8 +2296,8 @@ en: [
   traceTaps(); hints(); paintLoops();
   for(let i=0;i<NL;i++) paintKnob(i);
   paintFiles();
-  window.echoChamber = {P, buildGraph, traceTaps, rooms, tailSec, encodeWav, VIEW, toScreen,
-                        get taps(){return lastTaps;}, get lost(){return lastLost;}, MAXTAPS,
+  window.echoChamber = {P, buildGraph, traceTaps, chambers, tailSec, encodeWav, VIEW, toScreen,
+                        get taps(){return lastTaps;}, MAXTAPS,
                         loops, loadFiles, setVol, get files(){return files;}, get sel(){return sel;},
                         get SRC(){return SRC;}, set SRC(v){SRC=v;},
                         get LIS(){return LIS;}, set LIS(v){LIS=v;},
