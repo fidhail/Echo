@@ -1,0 +1,1668 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kruhová echo-komora</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@700;900&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --ground:#080B12;
+    --panel:#101622;
+    --panel-2:#0C1119;
+    --line:#1D2635;
+    --line-soft:#161E2A;
+    --text:#DDE4EF;
+    --muted:#79879C;
+    --dim:#77879E;
+    /* Dopplerov pár: modrý posun = priblíženie, červený = vzďaľovanie */
+    --blue:#5C9DFF;
+    --red:#FF6A46;
+    --wall:#33445C;
+    --open:#5BD6A6;
+    color-scheme: dark;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--ground);color:var(--text);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:13.5px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:none;margin:0;padding:10px 14px 12px;height:100%;
+    display:flex;flex-direction:column;gap:9px}
+
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:20px;
+    padding-bottom:8px;border-bottom:1px solid var(--line);flex:0 0 auto}
+  h1{font-family:Chivo,"IBM Plex Sans",sans-serif;font-weight:900;
+    font-size:clamp(17px,1.6vw,24px);line-height:1;letter-spacing:-.025em;margin:0}
+  h1 em{font-style:normal;color:var(--blue)}
+  .stamp{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--dim);white-space:nowrap}
+
+  /* tri stlpce: mapa - looper a nahravky - parametre v dvoch stlpcoch */
+  .grid{display:grid;
+    grid-template-columns:minmax(300px,1.02fr) minmax(232px,0.56fr) minmax(430px,1.3fr);
+    gap:11px;flex:1 1 auto;min-height:0}
+  .mid,.rack{min-height:0;overflow:auto;overscroll-behavior:contain}
+  .mid{display:flex;flex-direction:column;gap:10px}
+  /* osem rovnako velkych ohranicenych buniek: dva stlpce po styroch */
+  .rack{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(4,minmax(0,1fr));
+    grid-auto-flow:column;gap:8px}
+  .rack .mod{min-width:0;min-height:0;overflow:auto;display:flex;flex-direction:column}
+  .rack .mod > h2{flex:0 0 auto}
+  /* safe center: ked sa obsah nezmesti, zarovna sa hore a nic sa neorezne */
+  .rack .cells{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;
+    justify-content:center;justify-content:safe center}
+  .pairrow{display:flex;gap:9px}
+  .pairrow .ctl{margin-top:2px}
+  .pairrow .ctl .top{margin-bottom:1px}
+  .pairrow > .ctl{flex:1 1 0;min-width:0}
+  .pairrow > .ctl.hide{display:none}
+  .pairrow:has(> .ctl.hide){display:none}
+  @media (max-width:1320px){
+    .grid{grid-template-columns:minmax(0,0.92fr) minmax(214px,0.52fr) minmax(380px,1.36fr)}
+  }
+  @media (max-width:1060px){
+    .rack{grid-template-columns:1fr;grid-template-rows:none;grid-auto-flow:row}
+  }
+  @media (max-width:1000px){
+    .wrap{height:auto}
+    .grid{grid-template-columns:minmax(0,1fr)}
+    .mid,.rack{overflow:visible}
+    .canvas-box{height:62vh}
+  }
+
+  .stage{background:var(--panel-2);border:1px solid var(--line);border-radius:3px;overflow:hidden;
+    display:flex;flex-direction:column;min-height:0}
+  .canvas-box{flex:1 1 auto;min-height:180px;position:relative;
+    background:radial-gradient(circle at 50% 50%, #0E1522 0%, #080B12 72%)}
+  .stage canvas{position:absolute;inset:0;display:block;width:100%;height:100%;
+    touch-action:none;cursor:crosshair}
+  .stage canvas.grab{cursor:grab}
+  .stage canvas.grabbing{cursor:grabbing}
+
+  .bar{display:flex;flex-wrap:wrap;gap:7px;align-items:center;flex:0 0 auto;
+    padding:9px 10px;border-top:1px solid var(--line);background:var(--panel)}
+  .meter{flex:1 1 100px;min-width:80px;height:6px;background:var(--line-soft);border-radius:2px;overflow:hidden}
+  .meter i{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--red));
+    transition:width .06s linear}
+
+  button{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--text);background:transparent;border:1px solid var(--line);
+    padding:8px 13px;border-radius:2px;cursor:pointer;transition:border-color .15s,color .15s,background .15s}
+  button:hover:not(:disabled){border-color:var(--blue);color:#fff}
+  button:disabled{opacity:.35;cursor:not-allowed}
+  button.primary{background:var(--blue);border-color:var(--blue);color:#04121F;font-weight:500}
+  button.primary:hover{background:#7BB2FF;border-color:#7BB2FF;color:#04121F}
+  button.on{border-color:var(--blue);color:var(--blue)}
+  button.recording{border-color:var(--red);color:var(--red)}   /* stav gombika Nahrat vystup */
+  :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+  /* looper - stlpec na stopu: nahravanie, prehravanie, hlasitost */
+  .pads{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+  .padhead{font-family:"IBM Plex Mono",monospace;font-size:10px;line-height:1.45;
+    color:var(--dim);margin:-4px 0 9px}
+  .lane{position:relative;display:flex;flex-direction:column;gap:5px;
+    border:1px solid var(--line);border-radius:2px;background:#0A0F17;padding:7px 6px 8px}
+  .lane .num{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--dim);
+    text-align:center;line-height:1;letter-spacing:.12em}
+  .lane button{padding:6px 2px;font-size:9.5px;letter-spacing:.06em;width:100%}
+  .lane button.on.rec{border-color:var(--red);color:var(--red);background:rgba(255,106,70,.12)}
+  .lane button.on.ply{border-color:var(--open);color:var(--open);background:rgba(91,214,166,.12)}
+  .lane.has{border-color:var(--line-soft);background:#0C121C}
+  .lane .len{font-family:"IBM Plex Mono",monospace;font-size:9px;color:var(--dim);
+    text-align:center;line-height:1.2;min-height:1.2em;font-variant-numeric:tabular-nums}
+  .lane .clr{position:absolute;top:2px;right:4px;font-size:11px;color:var(--dim);line-height:1;
+    padding:1px 3px;opacity:0;transition:opacity .15s;cursor:pointer}
+  .lane:hover .clr{opacity:.8}
+  .lane .clr:hover{color:var(--red)}
+  .knob{display:flex;justify-content:center;cursor:ns-resize;touch-action:none}
+  .knob svg{display:block}
+
+  /* zoznam nacitanych nahravok */
+  .files{display:flex;flex-direction:column;margin-top:7px}
+  .frow{display:flex;align-items:center;gap:8px;padding:6px 7px;border-radius:2px;
+    border:1px solid transparent;cursor:pointer;font-size:12.5px;transition:border-color .15s}
+  .frow:hover{border-color:var(--line)}
+  .frow.sel{border-color:var(--blue);background:rgba(92,157,255,.08)}
+  .frow .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .frow .du{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--dim);
+    font-variant-numeric:tabular-nums;white-space:nowrap}
+  .frow .rm{color:var(--dim);font-size:13px;padding:0 2px;line-height:1}
+  .frow .rm:hover{color:var(--red)}
+
+  .legend{display:flex;gap:13px;flex-wrap:wrap;padding:7px 10px;border-top:1px solid var(--line);
+    background:var(--panel);font-family:"IBM Plex Mono",monospace;font-size:10px;flex:0 0 auto;
+    letter-spacing:.07em;text-transform:uppercase;color:var(--dim)}
+  .legend .tip{margin-left:auto;color:var(--blue)}
+  .legend i{display:inline-block;width:16px;height:2px;vertical-align:middle;margin-right:6px}
+
+  .mod{background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:9px 11px 10px}
+  .mod > h2{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.17em;text-transform:uppercase;
+    color:var(--dim);margin:0 0 7px;display:flex;align-items:baseline;gap:8px}
+  .mod > h2 b{color:var(--blue);font-weight:500}
+  .mod > h2 span{flex:1;height:1px;background:var(--line-soft);transform:translateY(-3px)}
+
+  .ctl{margin-top:7px}
+  .ctl:first-of-type{margin-top:0}
+  .ctl .top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:3px}
+  .ctl .nm{font-size:12.5px;color:var(--text)}
+  .ctl.off{opacity:.38}     /* parameter, ktorý zvolený režim nepoužíva */
+  .ctl.hide{display:none}   /* ladenie banky má zmysel len v jednom režime */
+  .num-wrap{display:flex;align-items:baseline;gap:4px;flex:0 0 auto}
+  input[type=number]{width:60px;text-align:right;font-family:"IBM Plex Mono",monospace;font-size:12px;
+    color:var(--blue);background:var(--panel-2);border:1px solid var(--line);border-radius:2px;
+    padding:2px 5px;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+  input[type=number]:focus{border-color:var(--blue);outline:none}
+  input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{
+    -webkit-appearance:none;margin:0}
+  .unit{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--dim);width:26px}
+  select{width:100%;font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--blue);
+    background:var(--panel-2);border:1px solid var(--line);border-radius:2px;padding:2px 6px;cursor:pointer}
+  select:focus{border-color:var(--blue);outline:none}
+  .hint{font-family:"IBM Plex Mono",monospace;font-size:10px;line-height:1.45;color:var(--dim);
+    margin-top:3px;font-variant-numeric:tabular-nums}
+
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:15px;background:transparent;cursor:pointer;margin:0}
+  input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--line);border-radius:2px}
+  input[type=range]::-moz-range-track{height:2px;background:var(--line);border-radius:2px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;
+    background:var(--text);border:none;margin-top:-5px;transition:background .15s,box-shadow .15s}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--text);border:none}
+  input[type=range]:hover::-webkit-slider-thumb{background:var(--blue);box-shadow:0 0 0 5px rgba(92,157,255,.14)}
+  input[type=range]:hover::-moz-range-thumb{background:var(--blue)}
+
+  .drop{border:1px dashed var(--line);border-radius:3px;padding:10px;text-align:center;color:var(--muted);
+    font-size:12px;transition:border-color .15s,color .15s}
+  .drop.hot{border-color:var(--blue);color:var(--blue)}
+  .status{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);
+    padding:8px 10px;background:var(--panel);border:1px solid var(--line);border-radius:3px;
+    min-height:1.5em;word-break:break-word;flex:0 0 auto}
+  .status.err{color:var(--red)}
+  .status.ok{color:var(--open)}
+  audio{width:100%;margin-top:10px;filter:invert(1) hue-rotate(180deg) saturate(.6);border-radius:2px}
+
+  .about{margin-top:auto;font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);
+    border-radius:3px;padding:8px 10px;flex:0 0 auto}
+  .about summary{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.17em;
+    text-transform:uppercase;color:var(--dim);cursor:pointer}
+  .about p{margin:9px 0 0;line-height:1.55}
+  /* nízke okno: tesnejšie riadky, nech sa parametre zmestia bez rolovania.
+     Musí byť až za základnými pravidlami, inak ich neprebije. */
+  @media (max-height:900px){
+    .ctl{margin-top:4px}
+    .ctl .top{margin-bottom:2px}
+    .mod{padding:6px 10px 7px}
+    .mod > h2{margin:0 0 4px}
+    .hint{font-size:9.5px;line-height:1.25;margin-top:2px}
+    input[type=range]{height:13px}
+    .rack{gap:6px}
+    .lane{padding:5px 5px 6px}
+    .lane button{padding:5px 2px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Kruhová <em>echo-komora</em></h1>
+    <div class="stamp">ray-traced reverb · v3 · c = 343 m·s<sup>-1</sup></div>
+  </header>
+
+  <div class="grid">
+
+    <section class="stage" aria-label="Mapa komory">
+      <div class="canvas-box">
+        <canvas id="cv" aria-label="Pohľad zhora na komory, lúče a odrazy. Zdroj a poslucháča presunieš ťahaním."></canvas>
+      </div>
+      <div class="bar">
+        <button id="play" class="primary" disabled>Prehrať</button>
+        <button id="mic">Mikrofón</button>
+        <button id="ping">Impulz</button>
+        <div class="meter" title="Výstupná úroveň"><i id="mtr"></i></div>
+        <button id="recout">● Nahrať výstup</button>
+        <button id="render" disabled>Render súboru</button>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--blue)"></i>približuje sa</span>
+        <span><i style="background:var(--red)"></i>vzďaľuje sa</span>
+        <span><i style="background:var(--wall)"></i>stena</span>
+        <span><i style="background:var(--open)"></i>otvor</span>
+        <span class="tip">zdroj aj poslucháča chyť myšou a ťahaj</span>
+      </div>
+    </section>
+
+    <section class="mid">
+      <div class="mod">
+        <h2><b>A</b> Looper<span></span></h2>
+        <div class="padhead">hore nahrávanie (do plnej stopy prekrýva), dole slučka, gombík hlasitosť ·
+          klávesy 1–8, so Shiftom nahrávanie · × maže</div>
+        <div class="pads" id="pads"></div>
+      </div>
+
+      <div class="mod">
+        <h2><b>B</b> Nahrávky<span></span></h2>
+        <div class="drop" id="drop">Pretiahni sem WAV / MP3 / M4A / FLAC — pridá sa do zoznamu
+          <br><button id="pick" style="margin-top:8px">Vybrať súbory</button>
+          <input type="file" id="file" multiple hidden
+            accept="audio/*,.m4a,.mp4,.aac,.wav,.mp3,.flac,.ogg,.opus,.aif,.aiff,.wma">
+        </div>
+        <div class="files" id="files"></div>
+        <audio id="preview" controls hidden></audio>
+      </div>
+
+      <div class="status" id="status" role="status" aria-live="polite">Načítaj zvukový súbor,
+        zapni mikrofón alebo klikni na Impulz.</div>
+
+      <details class="about">
+        <summary>Ako to počíta</summary>
+        <p>Zo zdroja vyletí N lúčov do rovnomerne rozložených smerov. Pre každý sa geometricky nájde bod
+          dopadu na stenu a uhol dopadu α; v kruhu má každá ďalšia tetiva rovnakú dĺžku 2R·cos α. Počuť je
+          len tie úseky, ktoré naozaj pretnú kruh poslucháča — každý prienik je jedno oneskorenie s vlastnou
+          hlasitosťou, filtrom a panorámou. Lúč sa na poslucháčovi nezastaví, letí ďalej a môže ho trafiť
+          znova. Nikde nie je spätná väzba, takže sústava nemôže narásť ani skresľovať.</p>
+        <p>Ak bod dopadu padne dovnútra vedľajšieho kruhu, stena tam nie je — lúč prejde a odráža sa ďalej
+          v druhej komore. Doppler nie je pitch shifter: zdroj naozaj obieha a dráhy sa predlžujú.</p>
+        <p>Rozpad na fundamenty: každý zásah nesie silu podľa počtu odrazov a času letu, zásahy sa podľa nej
+          triedia do štyroch stupňov a čím ďalej v chvoste, tým menej zložiek zo zvuku ostáva.</p>
+      </details>
+    </section>
+
+    <div class="rack" id="rack"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const C = 343;
+  const $ = id => document.getElementById(id);
+  const clamp = (v,a,b) => v<a?a:(v>b?b:v);
+
+  const P = { R:14, n:24, absorb:0.22, damp:6000, vel:0, orbit:0.45,
+              cham:0, overlap:0.35, mix:0.45, out:-6, width:0.70,
+              lisR:0.08, trace:2, hold:0,
+              dmode:0, decB:0, decT:0, droot:110, dscale:0 };
+  const MAXTAPS = 160;                     // strop poctu zasahov poslucaca
+  let SRC = {x:0.45, y:0};      // v jednotkách hlavného polomeru
+  let LIS = {x:-0.30, y:0.14};
+
+  /* ================= geometria a trasovanie ================= */
+  function rooms(){
+    const list = [{cx:0, cy:0, r:1, k:0}];
+    for(let k=1;k<=P.cham;k++){
+      const r = 0.26 + 0.10*k;
+      const ang = -Math.PI/2 + (k-1)*Math.PI/2 + 0.45;
+      const d = (1 + r) + P.overlap*(Math.sqrt(Math.max(0.02, 1 - r*r)) - (1 + r));
+      list.push({cx:Math.cos(ang)*d, cy:Math.sin(ang)*d, r, k});
+    }
+    return list;
+  }
+  function hitCircle(O, d, c){
+    const ox = O.x-c.cx, oy = O.y-c.cy;
+    const b = ox*d.x + oy*d.y, cc = ox*ox + oy*oy - c.r*c.r;
+    const t = -b + Math.sqrt(Math.max(1e-9, b*b - cc));
+    return {t, p:{x:O.x + t*d.x, y:O.y + t*d.y}};
+  }
+  const inside = (p,c) => Math.hypot(p.x-c.cx, p.y-c.cy) < c.r - 1e-6;
+  const nyq = (c, f) => clamp(f, 20, c.sampleRate*0.45);
+  function reflect(d, n){ const dn = d.x*n.x + d.y*n.y; return {x:d.x - 2*dn*n.x, y:d.y - 2*dn*n.y}; }
+
+  // Pretne úsek lúča kruh poslucháča? Vracia aj to, kde sa dotkne jeho okraja.
+  function crossListener(O, d, segLen){
+    const wx = LIS.x - O.x, wy = LIS.y - O.y;
+    const proj = clamp(wx*d.x + wy*d.y, 0, segLen);
+    const cx = O.x + proj*d.x - LIS.x, cy = O.y + proj*d.y - LIS.y;
+    const m2 = cx*cx + cy*cy, r2 = P.lisR*P.lisR;
+    if(m2 >= r2) return null;
+    return {at: Math.max(0, proj - Math.sqrt(Math.max(0, r2 - m2)))};
+  }
+
+  // Skutočné trasovanie: lúč sa odráža a pri každom úseku sa pýtame,
+  // či trafil poslucháča. Kto netrafí, nie je počuť.
+  function traceTaps(){
+    const rs = rooms(), taps = [];
+    const maxpath = Math.min(P.trace, 8) * C / P.R;   // v jednotkách polomeru
+    const refl = 1 - P.absorb;
+    // Strop nesmie byť len globálny: lúče sa trasujú po poradí, takže pri veľkom
+    // poslucháčovi by prvé lúče minuli všetky miesta a na ostatné by nezvýšilo nič.
+    const perRay = Math.max(2, Math.ceil(MAXTAPS/Math.max(1, P.n)));
+    let lost = 0;
+    for(let j=0;j<P.n;j++){
+      const th = (j + 0.5)*2*Math.PI/P.n;
+      let O = {x:SRC.x, y:SRC.y}, d = {x:Math.cos(th), y:Math.sin(th)};
+      let cur = 0, acc = 0, b = 0, amp = 1, leg0 = 0, mine = 0;
+      for(let guard=0; guard<3000; guard++){
+        const h = hitCircle(O, d, rs[cur]), p = h.p, segLen = h.t;
+        if(guard === 0) leg0 = segLen;
+        const cr = crossListener(O, d, segLen);
+        if(cr && mine < perRay && taps.length < MAXTAPS && (acc + cr.at) < maxpath){
+          mine += 1;
+          taps.push({path:acc + cr.at, amp, b, th, leg0,
+                     hx:O.x + cr.at*d.x, hy:O.y + cr.at*d.y,
+                     px:-d.x});
+        }
+        acc += segLen;
+        let into = -1;
+        for(let q=0;q<rs.length;q++) if(q !== cur && inside(p, rs[q])){ into = q; break; }
+        if(into >= 0){ cur = into; }                       // otvorom preletí bez odrazu
+        else {
+          const n = {x:(p.x - rs[cur].cx)/rs[cur].r, y:(p.y - rs[cur].cy)/rs[cur].r};
+          d = reflect(d, n); b += 1; amp *= refl;
+        }
+        O = {x:p.x + d.x*1e-5, y:p.y + d.y*1e-5};
+        if(!(acc < maxpath && amp > 0.0015 && mine < perRay && taps.length < MAXTAPS && b < 400)) break;
+      }
+      if(amp > 0.0015) lost += 1;
+    }
+    // Normujeme podľa skutočne zachytenej energie, nie podľa počtu zásahov —
+    // inak by pár náhodných neskorých zásahov znelo o desiatky dB inak než roj.
+    let e = 0; for(const t of taps) e += t.amp*t.amp;
+    // Energetické normovanie platí, len kým sú odbočky rozhádzané v čase. V symetrickej
+    // polohe (zdroj blízko stredu) prídu takmer naraz a sčítajú sa priamo — vtedy
+    // rozhoduje súčet amplitúd v tom istom milisekundovom okne, nie ich energia.
+    const bin = new Map();
+    for(const t of taps){
+      const k = Math.round(t.path*P.R/C*1000);
+      bin.set(k, (bin.get(k) || 0) + t.amp);
+    }
+    let cpk = 0;
+    for(const [k, v] of bin){                       // okno ±2 ms, nie jediná priehradka
+      let sum = 0;
+      for(let d=-2; d<=2; d++) sum += bin.get(k+d) || 0;
+      if(sum > cpk) cpk = sum;
+    }
+    const g = Math.min(0.62/Math.sqrt(Math.max(1e-9, e)), 0.5/Math.max(1e-9, cpk));
+    for(const t of taps){
+      t.g = t.amp*g;
+      // sila rozpadu: koľko odrazov už má za sebou + koľko sekúnd letí
+      t.s = clamp(t.b*P.decB + (t.path*P.R/C)*P.decT, 0, 1);
+    }
+    lastTaps = taps; lastLost = lost;
+    return taps;
+  }
+  let lastTaps = [], lastLost = 0;
+  const BUCKETS = [0,1,2,3,4,6,8,12,16,24,32,48];
+  const bucketOf = b => { let i = 0; while(i+1 < BUCKETS.length && BUCKETS[i+1] <= b) i++; return i; };
+  function bucketHz(ctx, i){
+    const b = BUCKETS[i];
+    return b < 1 ? nyq(ctx, 20000) : nyq(ctx, P.damp*Math.sqrt(Math.pow(2, 1/b) - 1));
+  }
+  function tailSec(){
+    if(P.absorb <= 0.0015) return Math.min(P.trace, 8);
+    const perBounce = 1.5*P.R/C;
+    return Math.min(Math.min(P.trace, 8), perBounce*(-6.908/Math.log(1-P.absorb)));
+  }
+
+  /* ================= rozpad chvosta na fundamenty =================
+     Každý zásah nesie „silu rozpadu" s: koľko odrazov už má za sebou a ako
+     dlho letí. Sila sa kvantuje do štyroch stupňov, aby na celý chvost stačili
+     štyri procesory a nie jeden na každý zásah. Stupeň dostane priemernú silu
+     svojich zásahov — pri malých rýchlostiach rozpadu teda ostáva priehľadný. */
+  const NST = 4;
+  const stageOf = s => clamp(Math.floor(s*NST), 0, NST-1);
+  const decayOn = () => P.dmode > 0 && (P.decB > 0 || P.decT > 0);
+  const SCALES = [
+    [1, 1.5, 2, 3, 4, 6, 8],                                  // kvinty a oktávy
+    [1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 6, 8],                    // dur
+    [1, 1.2, 1.5, 2, 2.4, 3, 4, 4.8, 6, 8],                   // mol
+    [1, 1.125, 1.5, 1.6875, 2, 2.25, 3, 3.375, 4, 4.5, 6, 8]  // pentatonika
+  ];
+
+  // radix-2 FFT na mieste, oddelená reálna a imaginárna časť
+  function fft(re, im, inv){
+    const n = re.length;
+    for(let i=1, j=0; i<n; i++){
+      let bit = n >> 1;
+      for(; j & bit; bit >>= 1) j ^= bit;
+      j ^= bit;
+      if(i < j){ let t=re[i]; re[i]=re[j]; re[j]=t; t=im[i]; im[i]=im[j]; im[j]=t; }
+    }
+    for(let len=2; len<=n; len<<=1){
+      const ang = (inv ? 2 : -2)*Math.PI/len, half = len>>1;
+      const wr = Math.cos(ang), wi = Math.sin(ang);
+      for(let i=0;i<n;i+=len){
+        let cr = 1, ci = 0;
+        for(let k=0;k<half;k++){
+          const ar = re[i+k], ai = im[i+k];
+          const br = re[i+k+half], bi = im[i+k+half];
+          const vr = br*cr - bi*ci, vi = br*ci + bi*cr;
+          re[i+k] = ar+vr; im[i+k] = ai+vi;
+          re[i+k+half] = ar-vr; im[i+k+half] = ai-vi;
+          const ncr = cr*wr - ci*wi; ci = cr*wi + ci*wr; cr = ncr;
+        }
+      }
+    }
+    if(inv) for(let i=0;i<n;i++){ re[i] /= n; im[i] /= n; }
+  }
+
+  // sínusové okno: w² sa pri polovičnom prekryve sčíta presne na 1,
+  // takže pri nulovom zásahu do spektra vyjde vstup nedotknutý
+  const NFFT = 1024, HOP = 512, BLK = HOP*2;
+  // ScriptProcessor je dvojito bufferovaný, k tomu ide vlastné oneskorenie STFT
+  // o jedno okno. O toľko treba posunúť všetko ostatné, inak by mokrý signál
+  // meškal za suchým o stovku milisekúnd.
+  const STFT_LAT = 2*BLK + HOP;
+  const WIN = new Float32Array(NFFT);
+  for(let i=0;i<NFFT;i++) WIN[i] = Math.sin(Math.PI*(i+0.5)/NFFT);
+  let SUMWIN = 0; for(let i=0;i<NFFT;i++) SUMWIN += WIN[i];
+  // tabuľkový sínus — v syntéze sa volá desaťtisíckrát za blok, Math.sin by nestíhal
+  const TB = 4096, SIN = new Float32Array(TB+1);
+  for(let i=0;i<=TB;i++) SIN[i] = Math.sin(2*Math.PI*i/TB);
+  function fsin(turns){
+    const x = (turns - Math.floor(turns))*TB, i = x|0;
+    return SIN[i] + (SIN[i+1] - SIN[i])*(x - i);
+  }
+
+  function makeStft(ctx, s, mode){
+    // Blok sú dve okná naraz: dosť rezervy proti zaváhaniu hlavného vlákna,
+    // ale ešte znesiteľné oneskorenie (dlhší blok ho priamo predlžuje).
+    const NH = BLK/HOP;
+    const node = ctx.createScriptProcessor(BLK, 2, 2);
+    const sr = ctx.sampleRate, H = NFFT >> 1;
+    const keepBins = Math.max(1, Math.round(48*Math.pow(1/48, s)));
+    const keepPart = Math.max(1, Math.round(10*Math.pow(0.1, s)));
+    const ch = [];
+    for(let c=0;c<2;c++) ch.push({
+      inb:new Float32Array(NFFT), acc:new Float32Array(NFFT), prev:new Float32Array(HOP),
+      re:new Float32Array(NFFT), im:new Float32Array(NFFT), mag:new Float32Array(H),
+      keep:new Uint8Array(H), gm:new Float32Array(H).fill(1), parts:[], quiet:0,
+      pf:new Float32Array(64), pdf:new Float32Array(64),
+      pa:new Float32Array(64), pda:new Float32Array(64), pph:new Float32Array(64)
+    });
+    node.onaudioprocess = e => {
+      const nin = e.inputBuffer.numberOfChannels;
+      for(let c=0;c<2;c++){
+        const st = ch[c];
+        const xc = e.inputBuffer.getChannelData(Math.min(c, nin-1));
+        const yc = e.outputBuffer.getChannelData(c);
+        for(let hp=0; hp<NH; hp++){
+        const x = xc.subarray(hp*HOP, hp*HOP + HOP);
+        const y = yc.subarray(hp*HOP, hp*HOP + HOP);
+        st.inb.copyWithin(0, HOP); st.inb.set(x, NFFT-HOP);
+
+        // ticho na vstupe: FFT netreba, len dobehne, čo je v zásobníku
+        let mxin = 0;
+        for(let i=0;i<HOP;i++){ const a = x[i] < 0 ? -x[i] : x[i]; if(a > mxin) mxin = a; }
+        st.quiet = mxin < 1e-7 ? st.quiet + 1 : 0;
+        if(st.quiet > 2){
+          for(let i=0;i<HOP;i++) y[i] = (1-s)*st.prev[i] + s*st.acc[i];
+          st.acc.copyWithin(0, HOP); st.acc.fill(0, NFFT-HOP);
+          if(st.parts.length) st.parts = [];
+          st.prev.set(x);
+          continue;
+        }
+
+        for(let i=0;i<NFFT;i++){ st.re[i] = st.inb[i]*WIN[i]; st.im[i] = 0; }
+        fft(st.re, st.im, false);
+        for(let i=0;i<H;i++){ const a = st.re[i], b = st.im[i]; st.mag[i] = Math.sqrt(a*a + b*b); }
+
+        const pk = [];
+        for(let i=2;i<H-1;i++) if(st.mag[i] > st.mag[i-1] && st.mag[i] >= st.mag[i+1]) pk.push(i);
+        pk.sort((a,b) => st.mag[b] - st.mag[a]);
+
+        if(mode === 1){                       // spektrálne sito
+          st.keep.fill(0);
+          const K = Math.min(keepBins, pk.length);
+          for(let q=0;q<K;q++){ const i = pk[q]; st.keep[i]=1; st.keep[i-1]=1; if(i+1<H) st.keep[i+1]=1; }
+          st.re[0]=0; st.im[0]=0;
+          // maska sa nezapína a nevypína skokom — inak vzniká „bublanie" (musical noise),
+          // keď sa zoznam ponechaných vrcholov mení z okna na okno
+          for(let i=1;i<H;i++){
+            const tgt = st.keep[i], g0 = st.gm[i];
+            const gg = g0 + (tgt - g0)*(tgt > g0 ? 0.5 : 0.12);
+            st.gm[i] = gg;
+            st.re[i] *= gg; st.im[i] *= gg;
+            st.re[NFFT-i] *= gg; st.im[NFFT-i] *= gg;
+          }
+          fft(st.re, st.im, true);
+          for(let i=0;i<NFFT;i++) st.acc[i] += st.re[i]*WIN[i];
+          for(let i=0;i<HOP;i++) y[i] = (1-s)*st.prev[i] + s*st.acc[i];
+          st.acc.copyWithin(0, HOP); st.acc.fill(0, NFFT-HOP);
+        } else {                              // sínusová resyntéza
+          const K = Math.min(keepPart, pk.length), np = [];
+          for(let q=0;q<K;q++){
+            const i = pk[q], m0 = st.mag[i-1], m1 = st.mag[i], m2 = st.mag[i+1];
+            const den = m0 - 2*m1 + m2;
+            const d = den < 0 ? clamp(0.5*(m0-m2)/den, -0.5, 0.5) : 0;
+            const f = (i+d)*sr/NFFT;
+            const a = 2*Math.max(0, m1 - 0.25*(m0-m2)*d)/SUMWIN;
+            if(f > 20 && f < sr*0.45) np.push({f, a, ph:0, f0:f, a0:0});
+          }
+          const used = new Array(st.parts.length).fill(false);
+          for(const p of np){
+            let best = -1, bd = 1e9;
+            for(let q=0;q<st.parts.length;q++){
+              if(used[q]) continue;
+              const dd = Math.abs(Math.log(st.parts[q].f/p.f));
+              if(dd < bd){ bd = dd; best = q; }
+            }
+            if(best >= 0 && bd < 0.06){
+              used[best] = true; const o = st.parts[best];
+              p.ph = o.ph; p.f0 = o.f; p.a0 = o.a;
+            } else p.ph = Math.random();
+          }
+          for(let q=0;q<st.parts.length;q++) if(!used[q]){
+            const o = st.parts[q];
+            np.push({f:o.f, f0:o.f, a:0, a0:o.a, ph:o.ph, dying:true});
+          }
+          // ploché polia — v hlavnej slučke sa nesmie siahať na vlastnosti objektov
+          const M = Math.min(np.length, 64);
+          const pf = st.pf, pdf = st.pdf, pa = st.pa, pda = st.pda, pph = st.pph;
+          for(let q=0;q<M;q++){
+            const p = np[q];
+            pf[q] = p.f0/sr; pdf[q] = (p.f - p.f0)/sr;
+            pa[q] = p.a0; pda[q] = p.a - p.a0; pph[q] = p.ph;
+          }
+          const iH = 1/HOP;
+          for(let n=0;n<HOP;n++){
+            const u = n*iH;
+            let v = 0;
+            for(let q=0;q<M;q++){
+              pph[q] += pf[q] + pdf[q]*u;
+              v += (pa[q] + pda[q]*u)*fsin(pph[q]);
+            }
+            y[n] = (1-s)*st.prev[n] + s*v;
+          }
+          for(let q=0;q<M;q++) np[q].ph = pph[q] - Math.floor(pph[q]);
+          st.parts = np.slice(0, M).filter(p => !p.dying);
+        }
+        st.prev.set(x);
+        }
+      }
+    };
+    return node;
+  }
+
+  const stftMode = m => m === 1 || m === 3;
+  function makeDecay(ctx, s, mode){
+    const inp = ctx.createGain(), out = ctx.createGain();
+    const plain = {in:inp, out, s, dispose(){}};
+    if(mode === 0 || s < 0.02){
+      // obídený stupeň musí dostať rovnaké oneskorenie ako tie, čo idú cez FFT
+      if(stftMode(mode)){
+        const d = ctx.createDelay(1);
+        d.delayTime.value = STFT_LAT/ctx.sampleRate;
+        inp.connect(d); d.connect(out);
+      } else inp.connect(out);
+      return plain;
+    }
+
+    if(mode === 4){                                   // postupné stmavovanie
+      const f = Math.max(45, 20000*Math.pow(1-s, 4));
+      let node = inp;
+      for(let i=0;i<2;i++){
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.Q.value = -3; lp.frequency.value = nyq(ctx, f);
+        node.connect(lp); node = lp;
+      }
+      const mk = ctx.createGain(); mk.gain.value = 1 + 2.4*s;   // náhrada za odobraté výšky
+      node.connect(mk); mk.connect(out);
+      return plain;
+    }
+    if(mode === 2){                                   // rezonančná banka
+      const rat = SCALES[clamp(P.dscale|0, 0, SCALES.length-1)];
+      const q = Math.min(200, 10 + 240*s*s);
+      const bank = ctx.createGain();
+      let cnt = 0;
+      for(const r of rat){
+        const f = P.droot*r;
+        if(f > ctx.sampleRate*0.42) continue;
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q;
+        inp.connect(bp); bp.connect(bank); cnt++;
+      }
+      // úzka priepusť prepustí energiu úmerne f0/Q, takže náhrada musí rásť s odmocninou
+      // z Q a klesať so základným tónom — inak sa hlasitosť mení pri ladení banky
+      bank.gain.value = cnt ? Math.min(7, 0.88*Math.sqrt(q/cnt)*Math.sqrt(220/Math.max(20, P.droot))) : 0;
+      const wg = ctx.createGain(); wg.gain.value = s;
+      const dg = ctx.createGain(); dg.gain.value = 1 - s;
+      bank.connect(wg); wg.connect(out);
+      inp.connect(dg); dg.connect(out);
+      return plain;
+    }
+    const sp = makeStft(ctx, s, mode);               // 1 = sito, 3 = sínusy
+    inp.connect(sp); sp.connect(out);
+    return {in:inp, out, s, dispose(){ sp.onaudioprocess = null; try{ sp.disconnect(); }catch(x){} }};
+  }
+
+  /* ================= audio graf ================= */
+  function buildGraph(ctx){
+    const input = ctx.createGain();
+    const dry = ctx.createGain(); dry.gain.value = Math.cos(P.mix*Math.PI/2);
+    const wet = ctx.createGain(); wet.gain.value = Math.sin(P.mix*Math.PI/2)*2.2;
+    const master = ctx.createGain(); master.gain.value = Math.pow(10, P.out/20);
+    const comp = ctx.createDynamicsCompressor();
+    // mäkký a pomalý — energia je normovaná, takže tvrdý limiter netreba a jeho
+    // rýchle zosilňovanie po každej prestavbe bolo počuť ako dýchanie
+    comp.threshold.value=-4; comp.knee.value=12; comp.ratio.value=6;
+    comp.attack.value=0.02; comp.release.value=0.35;
+    // suchý signál sa zarovná s mokrým, keď mokrý ide cez FFT
+    const lat = (decayOn() && stftMode(P.dmode)) ? STFT_LAT/ctx.sampleRate : 0;
+    if(lat > 0){
+      const dd = ctx.createDelay(1); dd.delayTime.value = lat;
+      input.connect(dd); dd.connect(dry);
+    } else input.connect(dry);
+    dry.connect(master);
+
+    // jedna filtrovaná zbernica na skupinu počtu odrazov (filter a oneskorenie
+    // sa dajú zameniť, takže filtrujeme raz pred delayom a nie pri každom zásahu)
+    const buses = BUCKETS.map((_, i) => {
+      const f = ctx.createBiquadFilter();
+      f.type = 'lowpass'; f.Q.value = -3; f.frequency.value = bucketHz(ctx, i);
+      input.connect(f);
+      return f;
+    });
+
+    const taps = traceTaps();
+
+    // stupne rozpadu — priemerná sila zásahov, ktoré do stupňa spadli
+    const useDec = decayOn();
+    let stages = null;
+    if(useDec){
+      const acc = [];
+      for(let i=0;i<NST;i++) acc.push({n:0, s:0});
+      for(const t of taps){ const k = stageOf(t.s); acc[k].n++; acc[k].s += t.s; }
+      stages = acc.map(q => {
+        if(!q.n) return null;
+        const st = makeDecay(ctx, q.s/q.n, P.dmode);
+        st.out.connect(wet);
+        st.count = q.n;
+        return st;
+      });
+    }
+    const sinkFor = t => (useDec && stages[stageOf(t.s)]) ? stages[stageOf(t.s)].in : wet;
+
+    const nodes = taps.map(t => {
+      const dl = ctx.createDelay(9);
+      dl.delayTime.value = clamp(t.path*P.R/C, 0, 8.9);
+      const g = ctx.createGain(); g.gain.value = t.g;
+      buses[bucketOf(t.b)].connect(dl); dl.connect(g);
+      let last = g, pan = null;
+      if(ctx.createStereoPanner){ pan = ctx.createStereoPanner();
+        pan.pan.value = clamp(t.px*P.width, -1, 1); g.connect(pan); last = pan; }
+      last.connect(sinkFor(t));
+      return {t, dl, g, pan};
+    });
+
+    // držanie po zásahu: štyri hrebene s nesúdeliteľnými dĺžkami
+    const holds = [];
+    if(P.hold >= 0.02){
+      const sum = ctx.createGain(); sum.gain.value = 0.25*1.4;
+      [0.0371, 0.0532, 0.0719, 0.0971].forEach(len => {
+        const dl = ctx.createDelay(0.2); dl.delayTime.value = len;
+        const fb = ctx.createGain();
+        fb.gain.value = Math.min(0.995, Math.pow(10, -3*len/P.hold));
+        const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.Q.value=-3;
+        lp.frequency.value = nyq(ctx, 9000);
+        wet.connect(dl); dl.connect(lp); lp.connect(fb); fb.connect(dl);
+        dl.connect(sum);
+        holds.push({dl, fb, lp, len});
+      });
+      const trim = ctx.createGain();
+      trim.gain.value = 1 - Math.min(0.995, Math.pow(10, -3*0.0371/P.hold));
+      sum.connect(trim); trim.connect(master);
+    }
+
+    wet.connect(master); master.connect(comp);
+    // vlastný člen na prelínanie: pri prestavbe sa starý graf stlmí a nový zosilnie,
+    // takže sa nikdy neseká chvost uprostred vlny
+    const fade = ctx.createGain();
+    comp.connect(fade);
+    return {input, dry, wet, master, comp, fade, buses, nodes, holds, taps, stages,
+            dispose(){ if(stages) for(const st of stages) if(st) st.dispose(); }};
+  }
+
+  /* ================= živý kontext ================= */
+  let ctx=null, graph=null, analyser=null, srcNode=null, micStream=null;
+  let srcBus=null, loopBus=null, liveIn=null, recProc=null, outProc=null, sink=null, monitor=null;
+  let files=[], sel=-1, playing=false, phase=0, lastT=0, rebuildTimer=null;
+
+  function ensureCtx(){
+    if(ctx) return ctx;
+    ctx = new (window.AudioContext||window.webkitAudioContext)();
+    srcBus = ctx.createGain(); loopBus = ctx.createGain(); liveIn = ctx.createGain();
+    srcBus.connect(liveIn); loopBus.connect(liveIn);
+    sink = ctx.createGain(); sink.gain.value = 0; sink.connect(ctx.destination);
+    monitor = ctx.createGain(); monitor.connect(sink);   // stály odbočný bod na meranie
+    analyser = ctx.createAnalyser(); analyser.fftSize = 1024;
+    analyser.connect(ctx.destination);                  // jeden na celú reláciu
+    if(ctx.createScriptProcessor){
+      recProc = ctx.createScriptProcessor(4096, 2, 2);
+      recProc.onaudioprocess = onLoopRec;
+      srcBus.connect(recProc); recProc.connect(sink);
+      outProc = ctx.createScriptProcessor(4096, 2, 2);
+      outProc.onaudioprocess = onOutRec;
+      outProc.connect(sink);
+    }
+    rebuild();
+    return ctx;
+  }
+  let XFADE = 0.25;                       // dĺžka prelínania medzi starým a novým grafom
+  function rebuild(){
+    if(!ctx) return;
+    const old = graph, t = ctx.currentTime;
+    const g = buildGraph(ctx);
+    g.fade.connect(analyser);
+    if(outProc) g.fade.connect(outProc);
+    if(monitor) g.fade.connect(monitor);
+    liveIn.connect(g.input);
+    if(old){
+      // starý graf ešte dohrá svoj chvost a až potom sa odpojí
+      g.fade.gain.setValueAtTime(0, t);
+      g.fade.gain.linearRampToValueAtTime(1, t + XFADE);
+      // starý graf dostáva vstup ďalej, kým sa prelína — inak by suchý signál na chvíľu zmizol
+      try{
+        // starý graf mohol byť sám uprostred nábehu — jeho naplánované body treba
+        // zrušiť, inak by sa gain uprostred stlmovania vrátil späť hore
+        const gp = old.fade.gain;
+        if(gp.cancelAndHoldAtTime) gp.cancelAndHoldAtTime(t);
+        else { const v = gp.value; gp.cancelScheduledValues(t); gp.setValueAtTime(v, t); }
+        gp.linearRampToValueAtTime(0, t + XFADE);
+      }catch(e){}
+      setTimeout(() => {
+        try{
+          liveIn.disconnect(old.input);
+          old.fade.disconnect(); old.comp.disconnect(); old.master.disconnect(); old.dispose();
+        }catch(e){}
+      }, (XFADE + 0.05)*1000);
+    }
+    graph = g;
+  }
+  function scheduleRebuild(){
+    if(!ctx) traceTaps();          // pred zapnutím zvuku sa graf nestavia, ale kresliť treba
+    hints();
+    clearTimeout(rebuildTimer);
+    rebuildTimer = setTimeout(()=>{ rebuild(); hints(); }, 350);
+  }
+  function live(){
+    if(!graph) return;
+    const t = ctx.currentTime;
+    graph.dry.gain.setTargetAtTime(Math.cos(P.mix*Math.PI/2), t, 0.03);
+    graph.wet.gain.setTargetAtTime(Math.sin(P.mix*Math.PI/2)*2.2, t, 0.03);
+    graph.master.gain.setTargetAtTime(Math.pow(10, P.out/20), t, 0.03);
+    graph.buses.forEach((f, i) => f.frequency.setTargetAtTime(bucketHz(ctx, i), t, 0.05));
+    graph.nodes.forEach(nd => {
+      nd.dl.delayTime.setValueAtTime(nd.dl.delayTime.value, t);
+      nd.dl.delayTime.linearRampToValueAtTime(clamp(nd.t.path*P.R/C, 0, 8.9), t + 0.06);
+      // panoráma zo smeru lúča v okamihu zásahu, nie z uhla vyžiarenia
+      if(nd.pan) nd.pan.pan.setTargetAtTime(clamp(nd.t.px*P.width, -1, 1), t, 0.05);
+    });
+  }
+
+  /* Doppler: zdroj naozaj obieha. Presne prepočítame prvú etapu dráhy každého
+     zásahu; zvyšok trajektórie sa dorovná až pri najbližšom prepočte, lebo
+     pretrasovať desiatky lúčov každých pár milisekúnd by bolo drahé. */
+  setInterval(()=>{
+    if(!ctx || !graph) return;
+    const now = performance.now()/1000;
+    const dt = lastT ? Math.min(0.2, now-lastT) : 0.06; lastT = now;
+    const rad = Math.hypot(SRC.x, SRC.y);
+    if(P.vel > 0 && rad > 0.01 && !dragging){
+      const dphi = (P.vel/(rad*P.R))*dt;
+      const ca = Math.cos(dphi), sa = Math.sin(dphi);
+      SRC = {x: SRC.x*ca - SRC.y*sa, y: SRC.x*sa + SRC.y*ca};
+      const t = ctx.currentTime, main = rooms()[0];
+      graph.nodes.forEach(nd => {
+        const th = nd.t.th;
+        const h = hitCircle(SRC, {x:Math.cos(th), y:Math.sin(th)}, main);
+        const v = clamp((nd.t.path + h.t - nd.t.leg0)*P.R/C, 0, 8.9);
+        nd.dl.delayTime.setValueAtTime(nd.dl.delayTime.value, t);
+        nd.dl.delayTime.linearRampToValueAtTime(v, t + 0.06);
+      });
+    }
+  }, 55);
+
+  /* ================= zdroje ================= */
+  function stopPlayback(){
+    clearInterval(seamTimer); seamTimer = null;
+    if(srcGain){ try{ srcGain.disconnect(); }catch(e){} srcGain = null; }
+    if(srcNode){ try{ srcNode.stop && srcNode.stop(); }catch(e){} try{ srcNode.disconnect(); }catch(e){} srcNode=null; }
+    playing = false; $('play').textContent = 'Prehrať';
+  }
+  /* Slučka sa vracia na začiatok súboru uprostred vlny — na šve preto stlmíme
+     signál na 6 ms. Bez toho luplo pri každom opakovaní. */
+  let srcGain = null, seamTimer = null;
+  function seams(g, startAt, dur){
+    const F = 0.006, plan = () => {
+      if(!playing || !ctx) return;
+      const now = ctx.currentTime;
+      let k = Math.max(1, Math.ceil((now - startAt)/dur));
+      for(let i=0;i<6;i++,k++){
+        const at = startAt + k*dur;
+        if(at - F <= now) continue;
+        g.gain.setValueAtTime(1, at - F);
+        g.gain.linearRampToValueAtTime(0, at);
+        g.gain.linearRampToValueAtTime(1, at + F);
+      }
+    };
+    plan();
+    clearInterval(seamTimer);
+    seamTimer = setInterval(plan, Math.max(400, dur*2500));
+  }
+  function stopAll(){
+    stopPlayback();
+    if(micStream){ micStream.getTracks().forEach(t=>t.stop()); micStream=null; $('mic').classList.remove('on'); }
+  }
+  function playBuffer(){
+    const f = files[sel];
+    if(!f) return;
+    ensureCtx(); ctx.resume(); stopPlayback();
+    const s2 = ctx.createBufferSource(); s2.buffer = f.buf; s2.loop = true;
+    const g = ctx.createGain();
+    const t0 = ctx.currentTime + 0.02;
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(1, t0 + 0.006);      // mäkký nábeh, nie lupnutie
+    s2.connect(g); g.connect(srcBus); s2.start(t0);
+    srcNode = s2; srcGain = g; playing = true; $('play').textContent = 'Zastaviť';
+    seams(g, t0, f.buf.duration);
+    say('Prehrávam: ' + f.name + ' (v slučke)');
+  }
+  async function loadFiles(list){
+    if(!list || !list.length) return;
+    ensureCtx();
+    let added = 0, failed = [];
+    for(const f of list){
+      say('Dekódujem ' + f.name + ' …');
+      try{
+        const buf = await ctx.decodeAudioData(await f.arrayBuffer());
+        files.push({name:f.name, buf});
+        sel = files.length - 1;
+        added += 1;
+      }catch(e){ failed.push(f.name); }
+    }
+    paintFiles();
+    $('play').disabled = files.length === 0;
+    $('render').disabled = files.length === 0;
+    const cur = files[sel];
+    failed.length
+      ? say('Nepodarilo sa dekódovať: ' + failed.join(', ') +
+            '. Formát AAC/M4A niektoré prehliadače nezvládnu — skús WAV alebo MP3.', 'err')
+      : say('Načítané: ' + cur.name + ' · ' + cur.buf.duration.toFixed(2) + ' s · ' +
+            cur.buf.numberOfChannels + ' kan. · ' + cur.buf.sampleRate + ' Hz' +
+            (files.length > 1 ? '  (v zozname ' + files.length + ')' : ''), 'ok');
+  }
+  function paintFiles(){
+    const wrap = $('files');
+    wrap.innerHTML = '';
+    files.forEach((f, i) => {
+      const row = document.createElement('div');
+      row.className = 'frow' + (i === sel ? ' sel' : '');
+      row.innerHTML = '<span class="nm"></span><span class="du">' + f.buf.duration.toFixed(1) +
+                      ' s</span><span class="rm" title="Odobrať zo zoznamu">×</span>';
+      row.querySelector('.nm').textContent = f.name;
+      row.addEventListener('click', e => {
+        if(e.target.classList.contains('rm')){
+          const wasSel = i === sel;
+          files.splice(i, 1);
+          if(i < sel) sel -= 1;                     // inak by sa vybral iný súbor
+          sel = Math.min(sel, files.length - 1);
+          if(wasSel && playing) stopPlayback();
+          $('play').disabled = files.length === 0;
+          $('render').disabled = files.length === 0;
+          paintFiles();
+          return;
+        }
+        sel = i; paintFiles();
+        if(playing) playBuffer();
+      });
+      wrap.appendChild(row);
+    });
+  }
+  function ping(){
+    ensureCtx(); ctx.resume();
+    const len = Math.floor(ctx.sampleRate*0.02);
+    const b = ctx.createBuffer(1, len, ctx.sampleRate), d = b.getChannelData(0);
+    for(let i=0;i<len;i++) d[i] = (Math.random()*2-1)*Math.pow(1 - i/len, 6);
+    const s = ctx.createBufferSource(); s.buffer = b; s.connect(srcBus); s.start();
+  }
+  let micNode = null, micBusy = false;
+  async function toggleMic(){
+    if(micBusy) return;                       // druhý klik počas pýtania povolenia
+    if(micStream){
+      micStream.getTracks().forEach(t=>t.stop()); micStream = null;
+      if(micNode){ try{ micNode.disconnect(); }catch(e){} micNode = null; }
+      $('mic').classList.remove('on'); say('Mikrofón vypnutý.'); return;
+    }
+    micBusy = true; $('mic').disabled = true;
+    try{
+      ensureCtx(); await ctx.resume();
+      const st = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+      if(micStream){ st.getTracks().forEach(t=>t.stop()); return; }
+      micStream = st;
+      micNode = ctx.createMediaStreamSource(micStream);   // musí byť v premennej
+      micNode.connect(srcBus);
+      $('mic').classList.add('on');
+      say('Mikrofón beží — použi slúchadlá, inak vznikne spätná väzba.', 'ok');
+    }catch(e){
+      micStream = null;
+      say('Mikrofón nie je dostupný (' + e.name + '). V publikovanej stránke ho prehliadač často blokuje — otvor stiahnutý HTML súbor lokálne.', 'err');
+    }finally{ micBusy = false; $('mic').disabled = false; }
+  }
+  function say(t, cls){ const s = $('status'); s.textContent = t; s.className = 'status' + (cls ? ' '+cls : ''); }
+
+  /* ================= looper ================= */
+  const NL = 8, MAXSEC = 60;
+  const loops = Array.from({length:NL}, () => ({
+    buf:null, node:null, gain:null, vol:1, playing:false,
+    rec:false, chunks:[], frames:0, dubAt:0, startT:0
+  }));
+
+  // kde v slucke prave sme, v sekundach
+  function loopPhase(lp){
+    if(!lp.buf || !lp.playing) return 0;
+    const d = lp.buf.duration;
+    return ((ctx.currentTime - lp.startT) % d + d) % d;
+  }
+  function onLoopRec(e){
+    const inp = e.inputBuffer;
+    const a = inp.getChannelData(0), b = inp.numberOfChannels > 1 ? inp.getChannelData(1) : a;
+    for(const lp of loops){
+      if(!lp.rec) continue;
+      if(lp.frames > inp.sampleRate*MAXSEC){ stopRec(lp); continue; }
+      lp.chunks.push([new Float32Array(a), new Float32Array(b)]);
+      lp.frames += inp.length;
+    }
+  }
+  function startRec(lp){
+    lp.chunks = []; lp.frames = 0; lp.rec = true;
+    lp.dubAt = lp.buf ? loopPhase(lp) : 0;      // odkial sa bude prekryvat
+    paintLoops();
+  }
+  function stopRec(lp){
+    lp.rec = false;
+    const n = lp.frames; lp.frames = 0;
+    if(n < 2048){ lp.chunks = []; paintLoops(); return; }
+    const L = new Float32Array(n), R = new Float32Array(n);
+    let o = 0;
+    for(const ch of lp.chunks){ L.set(ch[0], o); R.set(ch[1], o); o += ch[0].length; }
+    lp.chunks = [];
+    if(!lp.buf){
+      const b = ctx.createBuffer(2, n, ctx.sampleRate);
+      b.getChannelData(0).set(L); b.getChannelData(1).set(R);
+      lp.buf = b;
+    }else{
+      // prekrytie: nove sa primiesa do existujucej slucky od miesta, kde nahravanie zacalo,
+      // dlzka slucky sa nemeni - co pretecie za koniec, pokracuje od zaciatku
+      const wasPlaying = lp.playing, ph = loopPhase(lp), len = lp.buf.length;
+      const nb = ctx.createBuffer(2, len, ctx.sampleRate);
+      const dL = nb.getChannelData(0), dR = nb.getChannelData(1);
+      dL.set(lp.buf.getChannelData(0)); dR.set(lp.buf.getChannelData(1));
+      let w = Math.round(lp.dubAt * ctx.sampleRate) % len;
+      for(let i=0;i<n;i++){
+        dL[w] += L[i]; dR[w] += R[i];
+        w += 1; if(w >= len) w = 0;
+      }
+      let pk = 0;
+      for(let i=0;i<len;i++){
+        const v = Math.max(Math.abs(dL[i]), Math.abs(dR[i]));
+        if(v > pk) pk = v;
+      }
+      if(pk > 0.99){ const g = 0.99/pk; for(let i=0;i<len;i++){ dL[i] *= g; dR[i] *= g; } }
+      lp.buf = nb;
+      wasPlaying ? startPlay(lp, ph) : 0;
+    }
+    paintLoops();
+  }
+  function startPlay(lp, offset){
+    if(!lp.buf) return;
+    stopPlay(lp, true);
+    if(!lp.gain){ lp.gain = ctx.createGain(); lp.gain.connect(loopBus); }
+    lp.gain.gain.value = lp.vol;
+    const s2 = ctx.createBufferSource(); s2.buffer = lp.buf; s2.loop = true;
+    s2.connect(lp.gain);
+    const off = offset || 0;
+    s2.start(0, off);
+    lp.node = s2; lp.playing = true; lp.startT = ctx.currentTime - off;
+    paintLoops();
+  }
+  function stopPlay(lp, quiet){
+    if(lp.node){ try{ lp.node.stop(); }catch(e){} try{ lp.node.disconnect(); }catch(e){} lp.node = null; }
+    lp.playing = false;
+    quiet ? 0 : paintLoops();
+  }
+  function toggleRec(i){
+    ensureCtx(); ctx.resume();
+    const lp = loops[i];
+    lp.rec ? stopRec(lp) : startRec(lp);
+  }
+  function togglePlay(i){
+    ensureCtx(); ctx.resume();
+    const lp = loops[i];
+    lp.playing ? stopPlay(lp) : (lp.buf ? startPlay(lp, 0)
+      : say('Stopa ' + (i+1) + ' je prázdna — najprv ju nahraj horným tlačidlom.'));
+  }
+  function clearLoop(i){
+    const lp = loops[i];
+    stopPlay(lp, true);
+    lp.rec = false; lp.buf = null; lp.chunks = []; lp.frames = 0;
+    paintLoops();
+  }
+
+  /* ---- gombík hlasitosti stopy ---- */
+  const KMIN = 0, KMAX = 1.5;
+  function knobPt(deg, r){
+    const a = (deg - 90) * Math.PI/180;
+    return [18 + Math.cos(a)*r, 18 + Math.sin(a)*r];
+  }
+  function paintKnob(i){
+    const lp = loops[i];
+    const frac = (lp.vol - KMIN)/(KMAX - KMIN);
+    const deg = -135 + frac*270;
+    const [x0,y0] = knobPt(-135, 13), [x1,y1] = knobPt(deg, 13);
+    const big = (deg + 135) > 180 ? 1 : 0;
+    $('ka'+i).setAttribute('d', frac <= 0.001 ? ''
+      : 'M ' + x0.toFixed(2) + ' ' + y0.toFixed(2) + ' A 13 13 0 ' + big + ' 1 ' +
+        x1.toFixed(2) + ' ' + y1.toFixed(2));
+    const [px,py] = knobPt(deg, 6), [qx,qy] = knobPt(deg, 12);
+    const ln = $('kp'+i);
+    ln.setAttribute('x1', px.toFixed(2)); ln.setAttribute('y1', py.toFixed(2));
+    ln.setAttribute('x2', qx.toFixed(2)); ln.setAttribute('y2', qy.toFixed(2));
+    $('kn'+i).parentNode.title = 'Hlasitosť stopy ' + Math.round(lp.vol*100) +
+      ' % — ťahaj hore/dole, dvojklik vráti 100 %';
+  }
+  function setVol(i, v){
+    const lp = loops[i];
+    lp.vol = clamp(v, KMIN, KMAX);
+    if(lp.gain) lp.gain.gain.setTargetAtTime(lp.vol, ctx.currentTime, 0.02);
+    paintKnob(i);
+  }
+
+  function paintLoops(){
+    loops.forEach((lp,i) => {
+      const lane = $('lane'+i);
+      lane.classList.toggle('has', !!lp.buf);
+      const rb = lane.querySelector('.rec'), pb = lane.querySelector('.ply');
+      rb.classList.toggle('on', lp.rec);
+      rb.textContent = lp.rec ? '■ STOP' : (lp.buf ? '● DUB' : '● REC');
+      pb.classList.toggle('on', lp.playing);
+      pb.textContent = lp.playing ? '■ STOP' : '▶ LOOP';
+      const secs = lp.buf ? lp.buf.duration : (lp.frames && ctx ? lp.frames/ctx.sampleRate : 0);
+      lane.querySelector('.len').textContent = secs ? secs.toFixed(1) + ' s' : '—';
+    });
+  }
+
+  (function buildLanes(){
+    const wrap = $('pads');
+    for(let i=0;i<NL;i++){
+      const d = document.createElement('div');
+      d.className = 'lane'; d.id = 'lane'+i;
+      d.innerHTML =
+        '<span class="clr" title="Zmazať stopu">×</span>' +
+        '<div class="num">' + (i+1) + '</div>' +
+        '<button class="rec" aria-label="Nahrávanie stopy ' + (i+1) +
+        '" title="Nahrávanie — do plnej stopy prekrýva">● REC</button>' +
+        '<button class="ply" aria-label="Prehrávanie stopy ' + (i+1) +
+        '" title="Prehrávanie v slučke">▶ LOOP</button>' +
+        '<div class="knob"><svg id="kn' + i + '" width="36" height="36" viewBox="0 0 36 36">' +
+        '<circle cx="18" cy="18" r="13" fill="none" stroke="#1D2635" stroke-width="3"/>' +
+        '<path id="ka' + i + '" fill="none" stroke="#5C9DFF" stroke-width="3" stroke-linecap="round"/>' +
+        '<line id="kp' + i + '" stroke="#DDE4EF" stroke-width="2" stroke-linecap="round"/>' +
+        '</svg></div>' +
+        '<div class="len">—</div>';
+      d.querySelector('.rec').addEventListener('click', () => toggleRec(i));
+      d.querySelector('.ply').addEventListener('click', () => togglePlay(i));
+      d.querySelector('.clr').addEventListener('click', () => clearLoop(i));
+      const kb = d.querySelector('.knob');
+      let ky = 0, kv = 0, kdrag = false;
+      kb.addEventListener('pointerdown', e => {
+        kdrag = true; ky = e.clientY; kv = loops[i].vol;
+        kb.setPointerCapture(e.pointerId); e.preventDefault();
+      });
+      kb.addEventListener('pointermove', e => {
+        kdrag ? setVol(i, kv + (ky - e.clientY)/150 * (KMAX - KMIN)) : 0;
+      });
+      const kend = e => { kdrag = false; try{ kb.releasePointerCapture(e.pointerId); }catch(x){} };
+      kb.addEventListener('pointerup', kend);
+      kb.addEventListener('pointercancel', kend);
+      kb.addEventListener('dblclick', () => setVol(i, 1));
+      wrap.appendChild(d);
+    }
+  })();
+
+  document.addEventListener('keydown', e => {
+    if(/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
+    const i = '12345678'.indexOf(e.key);
+    if(i >= 0){ e.preventDefault(); e.shiftKey ? toggleRec(i) : togglePlay(i); return; }
+    // so Shiftom davaju cislice na niektorych rozlozeniach ine znaky
+    const j = '!@#$%^&*'.indexOf(e.key);
+    if(j >= 0){ e.preventDefault(); toggleRec(j); }
+  });
+
+  /* ================= nahrávanie výstupu ================= */
+  let outRec = null;
+  function onOutRec(e){
+    if(!outRec) return;
+    const inp = e.inputBuffer;
+    const a = inp.getChannelData(0), b = inp.numberOfChannels > 1 ? inp.getChannelData(1) : a;
+    outRec.chunks.push([new Float32Array(a), new Float32Array(b)]);
+    outRec.frames += inp.length;
+    if(outRec.frames > inp.sampleRate*300) toggleOutRec();
+  }
+  function toggleOutRec(){
+    ensureCtx(); ctx.resume();
+    if(!outRec){
+      outRec = {chunks:[], frames:0};
+      $('recout').classList.add('recording'); $('recout').textContent = '■ Zastaviť';
+      say('Nahrávam výstup …');
+      return;
+    }
+    const r = outRec; outRec = null;
+    $('recout').classList.remove('recording'); $('recout').textContent = '● Nahrať výstup';
+    if(r.frames < 4096){ say('Nahrávka bola príliš krátka.', 'err'); return; }
+    const buf = ctx.createBuffer(2, r.frames, ctx.sampleRate);
+    const L = buf.getChannelData(0), R = buf.getChannelData(1);
+    let o = 0; for(const ch of r.chunks){ L.set(ch[0], o); R.set(ch[1], o); o += ch[0].length; }
+    saveAudio(buf, 'komora_zaznam');
+  }
+
+  /* ================= render súboru + uloženie ================= */
+  async function render(){
+    const f = files[sel];
+    if(!f) return;
+    const buffer = f.buf;
+    $('render').disabled = true; say('Renderujem …');
+    await new Promise(r => setTimeout(r, 30));
+    try{
+      const sr = buffer.sampleRate;
+      const dur = Math.min(600, buffer.duration + tailSec() + P.hold + 0.4);
+      const off = new OfflineAudioContext(2, Math.ceil(dur*sr), sr);
+      const keep = {x:SRC.x, y:SRC.y};
+      const g = buildGraph(off);
+      g.comp.connect(off.destination);
+      const s = off.createBufferSource(); s.buffer = buffer; s.connect(g.input); s.start(0);
+      if(P.vel > 0){                                  // naplánovaný Doppler na celú dĺžku
+        const rad = Math.hypot(SRC.x, SRC.y);
+        if(rad > 0.01){
+          const w = P.vel/(rad*P.R), a0 = Math.atan2(SRC.y, SRC.x), main = rooms()[0];
+          g.nodes.forEach(nd => nd.dl.delayTime.setValueAtTime(nd.dl.delayTime.value, 0));
+          // krok podľa toho, ako rýchlo sa dráha naozaj mení, a najviac 12 000 bodov
+          // na odbočku — inak by sa pri dlhom súbore naplánovali milióny udalostí
+          const step = clamp(0.35/Math.max(0.05, w), 0.02, 0.5);
+          const dt = Math.max(step, dur*g.nodes.length/240000);
+          for(let t=dt;t<dur;t+=dt){
+            const S2 = {x:rad*Math.cos(a0 + w*t), y:rad*Math.sin(a0 + w*t)};
+            g.nodes.forEach(nd => {
+              const h = hitCircle(S2, {x:Math.cos(nd.t.th), y:Math.sin(nd.t.th)}, main);
+              nd.dl.delayTime.linearRampToValueAtTime(
+                clamp((nd.t.path + h.t - nd.t.leg0)*P.R/C, 0, 8.9), t);
+            });
+          }
+        }
+      }
+      SRC = keep;
+      const out = await off.startRendering();
+      await saveAudio(out, (f.name.replace(/\.[^.]+$/,'') || 'zvuk') + '_komora_' + P.R.toFixed(0) + 'm');
+    }catch(e){ say('Render zlyhal: ' + e.message, 'err'); }
+    $('render').disabled = false;
+  }
+
+  let lastURL = null;
+  async function saveAudio(buf, base){
+    const wav = encodeWav(buf);
+    const url = URL.createObjectURL(new Blob([wav], {type:'audio/wav'}));
+    if(lastURL) URL.revokeObjectURL(lastURL);
+    lastURL = url;
+    const pv = $('preview'); pv.src = url; pv.hidden = false;
+    let dl = null;
+    try{ dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; }catch(e){}
+    if(dl){
+      // v publikovanej stránke ide uloženie cez potvrdenie prehliadača a povolený formát je WebM
+      try{
+        say('Prevádzam na WebM (beží v reálnom čase, ' + buf.duration.toFixed(1) + ' s) …');
+        const blob = await toWebm(buf);
+        await dl.save({filename: base + '.webm', data: blob});
+        say('Uložené: ' + base + '.webm · ' + buf.duration.toFixed(2) + ' s', 'ok');
+      }catch(err){
+        const code = err && err.code;
+        say(code === 'declined' ? 'Uloženie si zrušil. Nahrávka ostáva v prehrávači nižšie.'
+            : 'Uloženie zlyhalo (' + (code || err.message) + '). Nahrávka ostáva v prehrávači nižšie.',
+            code === 'declined' ? '' : 'err');
+      }
+      return;
+    }
+    const a = document.createElement('a'); a.href = url; a.download = base + '.wav';
+    document.body.appendChild(a); a.click(); a.remove();
+    say('Uložené: ' + base + '.wav · ' + buf.duration.toFixed(2) + ' s', 'ok');
+  }
+
+  function toWebm(buf){
+    return new Promise((res, rej) => {
+      if(typeof MediaRecorder === 'undefined') return rej(new Error('MediaRecorder nie je dostupný'));
+      const mime = ['audio/webm;codecs=opus','audio/webm'].find(m => MediaRecorder.isTypeSupported(m));
+      if(!mime) return rej(new Error('WebM nie je podporovaný'));
+      const ac = new (window.AudioContext||window.webkitAudioContext)();
+      const dest = ac.createMediaStreamDestination();
+      const src = ac.createBufferSource(); src.buffer = buf; src.connect(dest);
+      const rec = new MediaRecorder(dest.stream, {mimeType:mime, audioBitsPerSecond:192000});
+      const chunks = [];
+      rec.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
+      rec.onerror = e => { try{ ac.close(); }catch(x){} rej(e.error || new Error('chyba nahrávania')); };
+      rec.onstop = () => { try{ ac.close(); }catch(x){} res(new Blob(chunks, {type:'audio/webm'})); };
+      src.onended = () => setTimeout(() => { if(rec.state !== 'inactive') rec.stop(); }, 300);
+      rec.start(); src.start();
+    });
+  }
+
+  function encodeWav(ab){
+    const nch = ab.numberOfChannels, len = ab.length, sr = ab.sampleRate;
+    const chans = []; for(let c=0;c<nch;c++) chans.push(ab.getChannelData(c));
+    const bytes = 44 + len*nch*2;
+    const dv = new DataView(new ArrayBuffer(bytes));
+    const str = (o,s) => { for(let i=0;i<s.length;i++) dv.setUint8(o+i, s.charCodeAt(i)); };
+    str(0,'RIFF'); dv.setUint32(4, bytes-8, true); str(8,'WAVE'); str(12,'fmt ');
+    dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,nch,true);
+    dv.setUint32(24,sr,true); dv.setUint32(28,sr*nch*2,true); dv.setUint16(32,nch*2,true);
+    dv.setUint16(34,16,true); str(36,'data'); dv.setUint32(40, len*nch*2, true);
+    let o = 44;
+    for(let i=0;i<len;i++) for(let c=0;c<nch;c++){
+      const v = clamp(chans[c][i], -1, 1);
+      dv.setInt16(o, v<0 ? v*0x8000 : v*0x7FFF, true); o += 2;
+    }
+    return dv.buffer;
+  }
+
+  /* ================= vizualizácia ================= */
+  const cv = $('cv'), g2 = cv.getContext('2d');
+  const VIEW = {cx:0, cy:0, s:1, w:0, h:0, dpr:1};
+  // Plátno vypĺňa svoj stĺpec a kreslí sa v CSS pixeloch, takže na hustých
+  // displejoch nie je rozmazané a na úzkom okne nezmenšuje ciele na ťahanie.
+  function fitCanvas(){
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const r = cv.getBoundingClientRect();
+    const w = Math.max(160, Math.round(r.width)), h = Math.max(160, Math.round(r.height));
+    if(cv.width !== Math.round(w*dpr) || cv.height !== Math.round(h*dpr)){
+      cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+    }
+    VIEW.w = w; VIEW.h = h; VIEW.dpr = dpr;
+  }
+
+  const toScreen = p => ({x: VIEW.cx + p.x*VIEW.s, y: VIEW.cy + p.y*VIEW.s});
+  const toWorld = (x,y) => ({x:(x - VIEW.cx)/VIEW.s, y:(y - VIEW.cy)/VIEW.s});
+
+  // Kreslíme presne to, čo počíta zvuk: odrazy, prelety otvormi a zásahy.
+  function walkDraw(O0, theta, steps, rs){
+    const pts = [{x:O0.x, y:O0.y}], gaps = [], hits = [];
+    let O = {x:O0.x, y:O0.y}, d = {x:Math.cos(theta), y:Math.sin(theta)}, cur = 0;
+    for(let s2=0;s2<steps;s2++){
+      const h = hitCircle(O, d, rs[cur]), p = h.p;
+      const cr = crossListener(O, d, h.t);
+      if(cr) hits.push({x:O.x + cr.at*d.x, y:O.y + cr.at*d.y});
+      pts.push(p);
+      let into = -1;
+      for(let q=0;q<rs.length;q++) if(q !== cur && inside(p, rs[q])){ into = q; break; }
+      if(into >= 0){ gaps.push(pts.length-1); cur = into; }
+      else { const n = {x:(p.x-rs[cur].cx)/rs[cur].r, y:(p.y-rs[cur].cy)/rs[cur].r}; d = reflect(d, n); }
+      O = {x:p.x + d.x*1e-5, y:p.y + d.y*1e-5};
+    }
+    return {pts, gaps, hits};
+  }
+
+  function draw(ts){
+    requestAnimationFrame(draw);
+    fitCanvas();
+    const W = VIEW.w, H = VIEW.h;
+    g2.setTransform(VIEW.dpr, 0, 0, VIEW.dpr, 0, 0);
+    const cl = rooms();
+    let minx=-1, maxx=1, miny=-1, maxy=1;
+    for(const c of cl){ minx=Math.min(minx,c.cx-c.r); maxx=Math.max(maxx,c.cx+c.r);
+                        miny=Math.min(miny,c.cy-c.r); maxy=Math.max(maxy,c.cy+c.r); }
+    const s = Math.min(W*0.92/(maxx-minx), H*0.92/(maxy-miny));
+    VIEW.s = s; VIEW.cx = W/2 - (minx+maxx)/2*s; VIEW.cy = H/2 - (miny+maxy)/2*s;
+    g2.clearRect(0,0,W,H);
+
+    // steny — bod po bode, s medzerou tam, kde je otvor do inej komory
+    for(const c of cl){
+      const N = 300;
+      for(let i=0;i<N;i++){
+        const a1 = i/N*2*Math.PI, a2 = (i+1)/N*2*Math.PI;
+        const p1 = {x:c.cx + Math.cos(a1)*c.r, y:c.cy + Math.sin(a1)*c.r};
+        const p2 = {x:c.cx + Math.cos(a2)*c.r, y:c.cy + Math.sin(a2)*c.r};
+        let open = false;
+        for(const o of cl){ if(o === c) continue; if(inside(p1,o) || inside(p2,o)){ open = true; break; } }
+        const s1 = toScreen(p1), s2 = toScreen(p2);
+        g2.strokeStyle = open ? 'rgba(91,214,166,.5)' : (c.k ? 'rgba(51,68,92,.8)' : '#33445C');
+        g2.lineWidth = open ? 1.5 : (c.k ? 2 : 3);
+        if(open && (i % 3) === 0) continue;
+        g2.beginPath(); g2.moveTo(s1.x, s1.y); g2.lineTo(s2.x, s2.y); g2.stroke();
+      }
+      if(c.k){
+        const sc = toScreen({x:c.cx, y:c.cy});
+        g2.fillStyle = '#3D4B60'; g2.font = '500 13px "IBM Plex Mono",monospace'; g2.textAlign = 'center';
+        g2.fillText((c.r*P.R).toFixed(1)+' m', sc.x, sc.y+4);
+      }
+    }
+
+    // lúče: rovnaká trajektória, akú počíta zvuk
+    const shown = Math.min(P.n, 28);
+    const depth = clamp(Math.round(320/P.n), 8, 40);   // pri malo lucoch kreslime hlbsie
+    for(let i=0;i<shown;i++){
+      const theta = (i + 0.5)*2*Math.PI/P.n;
+      let shift = 0;
+      if(P.vel > 0){
+        const rad = Math.hypot(SRC.x, SRC.y), a0 = Math.atan2(SRC.y, SRC.x);
+        const w = P.vel/(Math.max(rad,0.01)*P.R), dt = 0.02;
+        const S2 = {x:rad*Math.cos(a0 + w*dt), y:rad*Math.sin(a0 + w*dt)};
+        const h1 = hitCircle(SRC, {x:Math.cos(theta), y:Math.sin(theta)}, cl[0]);
+        const h2 = hitCircle(S2, {x:Math.cos(theta), y:Math.sin(theta)}, cl[0]);
+        shift = clamp((h1.t - h2.t)/dt*P.R/30, -1, 1);
+      }
+      const col = shift >= 0 ? [92 + shift*40, 157 + shift*20, 255]
+                             : [255, 157 + shift*90, 255 + shift*210];
+      const rgb = col.map(v => Math.round(clamp(v,0,255))).join(',');
+      const al = 0.11 + 0.42/Math.sqrt(P.n);
+      const path = walkDraw(SRC, theta, depth, cl);
+      for(let j=0;j<path.pts.length-1;j++){
+        const a = toScreen(path.pts[j]), b = toScreen(path.pts[j+1]);
+        g2.strokeStyle = 'rgba(' + rgb + ',' + al*Math.pow(0.88, j) + ')';
+        g2.lineWidth = 1.2;
+        g2.beginPath(); g2.moveTo(a.x, a.y); g2.lineTo(b.x, b.y); g2.stroke();
+      }
+      for(const gi of path.gaps){                       // priechod otvorom
+        const p = toScreen(path.pts[gi]);
+        g2.fillStyle = 'rgba(91,214,166,.65)';
+        g2.beginPath(); g2.arc(p.x, p.y, 2.6, 0, Math.PI*2); g2.fill();
+      }
+    }
+
+    // Zásahy kreslíme zo skutočného zoznamu odbočiek, nie z nakreslených čiar —
+    // čiary sa kreslia len po obmedzený počet odrazov, ale počuť je aj tie neskoršie.
+    const dec = decayOn();
+    for(const t of lastTaps){
+      const p = toScreen({x:t.hx, y:t.hy});
+      const late = t.b >= depth;
+      // pri zapnutom rozpade zásah blednutím ukazuje, koľko z neho ostane
+      const q = dec ? 1 - t.s : 0;
+      g2.fillStyle = dec
+        ? 'rgba(' + Math.round(255*q + 92*(1-q)) + ',' + Math.round(214*q + 157*(1-q)) +
+          ',' + Math.round(89*q + 255*(1-q)) + ',' + (late ? 0.5 : 0.9) + ')'
+        : (late ? 'rgba(255,214,89,.55)' : 'rgba(255,214,89,.95)');
+      g2.beginPath(); g2.arc(p.x, p.y, late ? 2.2 : 3, 0, Math.PI*2); g2.fill();
+    }
+
+    // dráha obehu
+    if(P.vel > 0){
+      const o = toScreen({x:0,y:0});
+      g2.strokeStyle = 'rgba(92,157,255,.22)'; g2.setLineDash([4,7]); g2.lineWidth = 1;
+      g2.beginPath(); g2.arc(o.x, o.y, Math.hypot(SRC.x,SRC.y)*s, 0, Math.PI*2); g2.stroke(); g2.setLineDash([]);
+    }
+
+    // poslucháč
+    const l = toScreen(LIS);
+    g2.strokeStyle = hover === 'lis' ? '#fff' : 'rgba(221,228,239,.6)'; g2.lineWidth = 1.5;
+    g2.beginPath(); g2.arc(l.x, l.y, Math.max(4, P.lisR*s), 0, Math.PI*2);
+    g2.fillStyle = 'rgba(221,228,239,.05)'; g2.fill(); g2.stroke();
+    g2.fillStyle = '#DDE4EF'; g2.beginPath(); g2.arc(l.x, l.y, 3, 0, Math.PI*2); g2.fill();
+    g2.fillStyle = '#79879C'; g2.font = '500 13px "IBM Plex Mono",monospace'; g2.textAlign = 'left';
+    g2.fillText('POSLUCHÁČ', l.x + Math.max(4, P.lisR*s) + 8, l.y + 4);
+
+    // zdroj
+    const sp = toScreen(SRC);
+    const glow = g2.createRadialGradient(sp.x, sp.y, 0, sp.x, sp.y, 22);
+    glow.addColorStop(0, 'rgba(255,106,70,.85)'); glow.addColorStop(1, 'rgba(255,106,70,0)');
+    g2.fillStyle = glow; g2.beginPath(); g2.arc(sp.x, sp.y, 22, 0, Math.PI*2); g2.fill();
+    g2.fillStyle = hover === 'src' ? '#FFB09A' : '#FF6A46';
+    g2.beginPath(); g2.arc(sp.x, sp.y, 5.5, 0, Math.PI*2); g2.fill();
+    g2.fillStyle = '#79879C'; g2.textAlign = 'center';
+    g2.fillText('ZDROJ', sp.x, sp.y - 16);
+
+    if(analyser){
+      const a = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteTimeDomainData(a);
+      let pk = 0; for(let i=0;i<a.length;i++){ const v = Math.abs(a[i]-128)/128; if(v > pk) pk = v; }
+      $('mtr').style.width = Math.min(100, pk*118).toFixed(1) + '%';
+    }
+  }
+  requestAnimationFrame(draw);
+
+  /* ---- ťahanie zdroja a poslucháča ---- */
+  let dragging = null, hover = null;
+  function evtWorld(e){
+    const r = cv.getBoundingClientRect();
+    return toWorld(e.clientX - r.left, e.clientY - r.top);
+  }
+  function pick(w){
+    const ds = Math.hypot(w.x-SRC.x, w.y-SRC.y), dl = Math.hypot(w.x-LIS.x, w.y-LIS.y);
+    const lgrab = clamp(P.lisR, 0.10, 0.22);
+    if(ds < 0.10 && ds <= dl) return 'src';
+    if(dl < lgrab) return 'lis';
+    return null;
+  }
+  cv.addEventListener('pointerdown', e => {
+    const w = evtWorld(e), p = pick(w);
+    if(!p) return;
+    dragging = p; try{ cv.setPointerCapture(e.pointerId); }catch(x){}
+    cv.classList.add('grabbing');
+  });
+  cv.addEventListener('pointermove', e => {
+    const w = evtWorld(e);
+    if(!dragging){ hover = pick(w); cv.classList.toggle('grab', !!hover); return; }
+    const lim = dragging === 'lis' ? Math.max(0.02, 0.99 - P.lisR) : 0.99;
+    const r = Math.hypot(w.x, w.y);
+    const q = r > lim ? {x:w.x/r*lim, y:w.y/r*lim} : w;
+    if(dragging === 'src'){ SRC = q; syncOrbit(); } else { LIS = q; }
+    live();
+  });
+  function endDrag(e){
+    if(!dragging) return;
+    dragging = null; cv.classList.remove('grabbing');
+    try{ cv.releasePointerCapture(e.pointerId); }catch(x){}
+    scheduleRebuild();
+  }
+  cv.addEventListener('pointerup', endDrag);
+  cv.addEventListener('pointercancel', endDrag);
+
+  /* ================= ovládací panel ================= */
+  const RACK = [
+    {t:'Vstup', col:0, items:[
+      {k:'mix',   n:'Suchý / mokrý signál', min:0, max:100, step:0.5, sc:100, u:'%', dec:1},
+      {k:'out',   n:'Výstupná hlasitosť',   min:-60, max:24, step:0.5, sc:1, u:'dB', dec:1}
+    ]},
+    {t:'Rozmery', col:0, items:[
+      {k:'R',     n:'Polomer komory', min:0.1, max:150, step:0.1, sc:1, u:'m', dec:1, hint:'r'},
+      {k:'lisR',  n:'Veľkosť poslucháča', min:1, max:90, step:0.1, sc:100, u:'%', dec:1, st:1, hint:'l'}
+    ]},
+    {t:'Vedľajšie komory', col:0, items:[
+      {k:'cham',    n:'Počet pripojených komôr', min:0, max:4, step:1, sc:1, u:'', dec:0, st:1, hint:'k'},
+      {k:'overlap', n:'Prekryv kruhov', min:0, max:100, step:0.5, sc:100, u:'%', dec:1, st:1, hint:'o'}
+    ]},
+    {t:'Dopplerov efekt', col:0, items:[
+      {k:'vel',   n:'Rýchlosť obehu zdroja', min:0, max:343, step:0.5, sc:1, u:'m/s', dec:1, hint:'v'},
+      {k:'orbit', n:'Odstup zdroja od stredu', min:0, max:99.5, step:0.5, sc:100, u:'%', dec:1, set:setOrbit}
+    ]},
+    {t:'Vyslané lúče', col:1, items:[
+      {k:'n',     n:'Počet vyslaných lúčov', min:1, max:64, step:1, sc:1, u:'', dec:0, st:1, hint:'n'},
+      {k:'width', n:'Rozprestretie odrazov', min:0, max:200, step:1, sc:100, u:'%', hint:'w'}
+    ]},
+    {t:'Chvost', col:1, items:[
+      {k:'trace', n:'Ako dlho sa lúč sleduje', min:0.05, max:8, step:0.01, sc:1, u:'s', dec:2, st:1, hint:'t'},
+      {k:'hold',  n:'Držanie po zásahu', min:0, max:8, step:0.01, sc:1, u:'s', dec:2, st:1, hint:'h'}
+    ]},
+    {t:'Rozpad na fundamenty', col:1, items:[
+      {k:'dmode',  n:'Režim rozpadu', st:1, hint:'d',
+       opts:['vypnuté','spektrálne sito','rezonančná banka','sínusová resyntéza','postupné stmavovanie']},
+      {k:'decB',   n:'Rozpad na jeden odraz', min:0, max:25, step:0.1, sc:100, u:'%', dec:1, st:1},
+      {k:'decT',   n:'Rozpad za sekundu', min:0, max:300, step:1, sc:100, u:'%', dec:0, st:1, hint:'dt'},
+      {k:'droot',  n:'Základný tón', min:27.5, max:880, step:0.5, sc:1, u:'Hz', dec:1, st:1, pair:1},
+      {k:'dscale', n:'Ladenie', st:1, pair:1, opts:['kvinty a oktávy','dur','mol','pentatonika']}
+    ]},
+    {t:'Vstrebávanie stien', col:1, items:[
+      {k:'absorb', n:'Pohltivosť pri odraze', min:0, max:100, step:0.1, sc:100, u:'%', dec:1, st:1, hint:'a'},
+      {k:'damp',   n:'Tlmenie výšok stenou', min:20, max:20000, step:10, sc:1, u:'Hz', dec:0}
+    ]}
+  ];
+
+  function setOrbit(v){
+    const a = Math.atan2(SRC.y, SRC.x) || 0;
+    SRC = {x:Math.cos(a)*v, y:Math.sin(a)*v};
+  }
+  function syncOrbit(){
+    const r = Math.hypot(SRC.x, SRC.y);
+    P.orbit = r;
+    const sl = $('s-orbit'), nb = $('n-orbit');
+    if(sl){ sl.value = String(Math.round(r*100)); nb.value = String(Math.round(r*100)); }
+  }
+  (function buildRack(){
+    const rack = $('rack');
+    RACK.forEach((mod, mi) => {
+      const box = document.createElement('div'); box.className = 'mod';
+      box.innerHTML = '<h2><b>' + String(mi).padStart(2,'0') + '</b> ' + mod.t + '<span></span></h2>';
+      const cells = document.createElement('div'); cells.className = 'cells';
+      box.appendChild(cells);
+      let pairbox = null;
+      const put = (it, el) => {
+        if(!it.pair){ cells.appendChild(el); return; }
+        if(!pairbox){ pairbox = document.createElement('div'); pairbox.className = 'pairrow';
+                      cells.appendChild(pairbox); }
+        pairbox.appendChild(el);
+      };
+      mod.items.forEach(it => {
+        if(it.opts){
+          const w = document.createElement('div'); w.className = 'ctl';
+          w.innerHTML =
+            '<div class="top"><span class="nm">' + it.n + '</span></div>' +
+            '<select id="x-' + it.k + '">' +
+            it.opts.map((o, i) => '<option value="' + i + '"' + (i === P[it.k] ? ' selected' : '') +
+                                  '>' + o + '</option>').join('') + '</select>' +
+            (it.hint ? '<div class="hint" id="h-' + it.hint + '"></div>' : '');
+          put(it, w);
+          w.querySelector('select').addEventListener('change', e => {
+            P[it.k] = +e.target.value;
+            hints();
+            if(it.st) scheduleRebuild(); else live();
+          });
+          return;
+        }
+        const dec = it.dec === undefined ? 0 : it.dec;
+        const wrap = document.createElement('div'); wrap.className = 'ctl';
+        const raw = P[it.k]*(it.sc || 1);
+        wrap.innerHTML =
+          '<div class="top"><span class="nm">' + it.n + '</span>' +
+          '<span class="num-wrap"><input type="number" id="n-' + it.k + '" min="' + it.min + '" max="' + it.max +
+          '" step="' + it.step + '" value="' + raw.toFixed(dec) + '"><span class="unit">' + it.u + '</span></span></div>' +
+          '<input type="range" id="s-' + it.k + '" min="' + it.min + '" max="' + it.max + '" step="' + it.step +
+          '" value="' + raw + '">' + (it.hint ? '<div class="hint" id="h-' + it.hint + '"></div>' : '');
+        put(it, wrap);
+        const sl = wrap.querySelector('input[type=range]'), nb = wrap.querySelector('input[type=number]');
+        const apply = (v, fromNum) => {
+          v = clamp(v, it.min, it.max);
+          P[it.k] = v/(it.sc || 1);
+          if(it.set) it.set(P[it.k]);
+          if(!fromNum) nb.value = v.toFixed(dec);
+          sl.value = String(v);
+          hints();
+          if(it.st) scheduleRebuild(); else live();
+        };
+        const settle = () => { const v = parseFloat(nb.value); apply(isFinite(v) ? v : it.min, false); };
+        sl.addEventListener('input', () => apply(parseFloat(sl.value), false));
+        // po pustení slidra prestavíme hneď, nech sa nečaká na doznenie oneskorenia
+        if(it.st) sl.addEventListener('change', () => {
+          clearTimeout(rebuildTimer); rebuild(); hints();
+        });
+        nb.addEventListener('input', () => { const v = parseFloat(nb.value); if(isFinite(v)) apply(v, true); });
+        nb.addEventListener('change', settle);
+        nb.addEventListener('blur', settle);
+        nb.addEventListener('keydown', e => { if(e.key === 'Enter') settle(); });
+      });
+      rack.appendChild(box);
+    });
+  })();
+
+  function hints(){
+    $('h-r').textContent = 'k stene a späť ' + (2000*P.R/C).toFixed(0) + ' ms · chvost ' +
+      tailSec().toFixed(2) + ' s';
+    const nt = lastTaps.length;
+    const deep = lastTaps.filter(t => t.b >= clamp(Math.round(320/P.n), 8, 40)).length;
+    $('h-n').textContent = nt + ' zásahov' + (deep ? ' · ' + deep + ' hlbšie, než sa kreslí' : '') +
+      (lastLost ? ' · ' + lastLost + ' minulo' : '') + (nt >= MAXTAPS ? ' · strop' : '');
+    $('h-l').textContent = nt === 0
+      ? 'nikto ho netrafil — zväčši ho alebo pridaj lúče'
+      : 'polomer ' + (P.lisR*P.R).toFixed(1) + ' m · väčší = hustejší dozvuk';
+    $('h-a').textContent = P.absorb <= 0.0015
+      ? 'stena neberie nič — chvost obmedzuje už len dĺžka sledovania'
+      : (P.absorb >= 0.995
+        ? 'stena berie všetko — len prvé odrazy'
+        : 'odrazivosť ' + ((1-P.absorb)*100).toFixed(0) + ' % · chvost ' + tailSec().toFixed(2) + ' s');
+    $('h-t').textContent = 'strop ' + P.trace.toFixed(2) + ' s alebo −56 dB · reálne ' +
+      tailSec().toFixed(2) + ' s';
+    $('h-h').textContent = P.hold < 0.02
+      ? 'zásah zaznie a skončí'
+      : 'zachytený zvuk doznieva ešte ' + P.hold.toFixed(2) + ' s';
+    const DTXT = ['vypnuté — chvost znie tak, ako doletel',
+      'ostávajú len najsilnejšie vrcholy',
+      'ustáli sa na tónoch stupnice',
+      'zložky sa prehrajú ako sínusy',
+      'chvost sa filtruje čoraz nižšie'];
+    ['decB','decT','droot','dscale'].forEach(k => {
+      const el = document.getElementById('s-'+k) || document.getElementById('x-'+k);
+      const box = el && el.closest('.ctl');
+      if(!box) return;
+      const bank = k === 'droot' || k === 'dscale';
+      box.classList.toggle('hide', bank && P.dmode !== 2);
+      box.classList.toggle('off', !bank && P.dmode === 0);
+    });
+    // v režime banky sa do bunky nezmestia napovedy aj ladenie - napovedy idú preč,
+    // režim aj tak pomenúva výberové pole
+    const bankOn = P.dmode === 2;
+    $('h-d').style.display = bankOn ? 'none' : '';
+    $('h-dt').style.display = bankOn ? 'none' : '';
+    $('h-d').textContent = DTXT[P.dmode|0] +
+      (P.dmode > 0 && P.decB <= 0 && P.decT <= 0 ? ' · zapni aspoň jednu rýchlosť nižšie' : '');
+    const perB = P.decB > 0 ? (1/P.decB).toFixed(0) + ' odrazoch' : null;
+    const perT = P.decT > 0 ? (1/P.decT).toFixed(2) + ' s' : null;
+    $('h-dt').textContent = (!perB && !perT) ? 'obe rýchlosti sú na nule — nič sa nerozkladá'
+      : 'úplný po ' + [perB, perT].filter(Boolean).join(' / ');
+    $('h-v').textContent = P.vel > 0
+      ? 'pri 1–2 lúčoch počuť pokles tónu, pri mnohých trblietanie'
+      : 'zdroj stojí, žiadny posun tónu';
+    $('h-k').textContent = P.cham === 0 ? 'iba hlavný kruh' : P.cham + '× menší kruh vedľa hlavného';
+    $('h-w').textContent = P.width <= 1.005
+      ? 'odrazy sedia tam, kam ich posiela geometria'
+      : 'nad 100 % sa tlačia k okrajom — nie širšie, len dutejšie';
+    const cl = rooms();
+    let open = 0;
+    if(P.cham > 0){
+      const N = 200;
+      for(let i=0;i<N;i++){
+        const a = i/N*2*Math.PI, p = {x:Math.cos(a), y:Math.sin(a)};
+        for(let j=1;j<cl.length;j++) if(inside(p, cl[j])){ open++; break; }
+      }
+      open = open/N*100;
+    }
+    $('h-o').textContent = P.cham === 0 ? 'najprv pridaj aspoň jednu komoru'
+      : 'otvor tvorí ' + open.toFixed(0) + ' % obvodu hlavného kruhu';
+  }
+
+  /* ================= drôtovanie UI ================= */
+  $('play').addEventListener('click', () => { playing ? (stopPlayback(), say('Zastavené.')) : playBuffer(); });
+  $('mic').addEventListener('click', toggleMic);
+  $('ping').addEventListener('click', ping);
+  $('render').addEventListener('click', render);
+  $('recout').addEventListener('click', toggleOutRec);
+  $('pick').addEventListener('click', () => $('file').click());
+  $('file').addEventListener('change', e => { loadFiles(e.target.files); e.target.value = ''; });
+  const drop = $('drop');
+  ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('hot'); }));
+  ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('hot'); }));
+  document.addEventListener('dragover', e => e.preventDefault());
+  document.addEventListener('drop', e => { e.preventDefault(); loadFiles(e.dataTransfer.files); });
+
+  traceTaps(); hints(); paintLoops();
+  for(let i=0;i<NL;i++) paintKnob(i);
+  paintFiles();
+  window.echoChamber = {P, buildGraph, traceTaps, rooms, tailSec, encodeWav, VIEW, toScreen,
+                        get taps(){return lastTaps;}, get lost(){return lastLost;}, MAXTAPS,
+                        loops, loadFiles, setVol, get files(){return files;}, get sel(){return sel;},
+                        get SRC(){return SRC;}, set SRC(v){SRC=v;},
+                        get LIS(){return LIS;}, set LIS(v){LIS=v;},
+                        ensureCtx, rebuild, get ctx(){return ctx;}, get graph(){return graph;},
+                        get srcBus(){return srcBus;}, get monitor(){return monitor;},
+                        setXfade(v){ XFADE = v; }};
+})();
+</script>
+
+</body>
+</html>
